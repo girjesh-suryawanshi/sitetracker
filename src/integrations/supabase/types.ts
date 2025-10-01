@@ -197,7 +197,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_user_has_role: {
+        Args: { required_roles: Database["public"]["Enums"]["user_role"][] }
+        Returns: boolean
+      }
+      check_user_role: {
+        Args: { required_role: Database["public"]["Enums"]["user_role"] }
+        Returns: boolean
+      }
     }
     Enums: {
       payment_status: "paid" | "unpaid" | "partial"
