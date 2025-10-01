@@ -153,7 +153,7 @@ const Reports = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="payment_status">Payment Status</Label>
-                <Select name="payment_status">
+                <Select name="payment_status" defaultValue="all">
                   <SelectTrigger>
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
@@ -167,7 +167,7 @@ const Reports = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="site_id">Site</Label>
-                <Select name="site_id">
+                <Select name="site_id" defaultValue="all">
                   <SelectTrigger>
                     <SelectValue placeholder="All sites" />
                   </SelectTrigger>
@@ -183,7 +183,7 @@ const Reports = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="vendor_id">Vendor</Label>
-                <Select name="vendor_id">
+                <Select name="vendor_id" defaultValue="all">
                   <SelectTrigger>
                     <SelectValue placeholder="All vendors" />
                   </SelectTrigger>
@@ -199,7 +199,7 @@ const Reports = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category_id">Category</Label>
-                <Select name="category_id">
+                <Select name="category_id" defaultValue="all">
                   <SelectTrigger>
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
