@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      bank_accounts: {
+        Row: {
+          account_name: string
+          account_number: string
+          balance: number
+          bank_name: string
+          created_at: string
+          id: string
+          ifsc_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          balance?: number
+          bank_name: string
+          created_at?: string
+          id?: string
+          ifsc_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          balance?: number
+          bank_name?: string
+          created_at?: string
+          id?: string
+          ifsc_code?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           category_name: string
@@ -36,12 +69,14 @@ export type Database = {
         Row: {
           amount: number
           attachment_url: string | null
+          bank_account_id: string | null
           category_id: string
           created_at: string
           created_by: string
           date: string
           description: string | null
           id: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
           payment_status: Database["public"]["Enums"]["payment_status"]
           site_id: string
           updated_at: string
@@ -50,12 +85,14 @@ export type Database = {
         Insert: {
           amount: number
           attachment_url?: string | null
+          bank_account_id?: string | null
           category_id: string
           created_at?: string
           created_by: string
           date: string
           description?: string | null
           id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
           payment_status?: Database["public"]["Enums"]["payment_status"]
           site_id: string
           updated_at?: string
@@ -64,18 +101,27 @@ export type Database = {
         Update: {
           amount?: number
           attachment_url?: string | null
+          bank_account_id?: string | null
           category_id?: string
           created_at?: string
           created_by?: string
           date?: string
           description?: string | null
           id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
           payment_status?: Database["public"]["Enums"]["payment_status"]
           site_id?: string
           updated_at?: string
           vendor_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "expenses_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expenses_category_id_fkey"
             columns: ["category_id"]
@@ -207,6 +253,7 @@ export type Database = {
       }
     }
     Enums: {
+      payment_method: "cash" | "bank_transfer"
       payment_status: "paid" | "unpaid" | "partial"
       user_role: "admin" | "site_manager" | "viewer"
     }
@@ -336,6 +383,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      payment_method: ["cash", "bank_transfer"],
       payment_status: ["paid", "unpaid", "partial"],
       user_role: ["admin", "site_manager", "viewer"],
     },

@@ -29,9 +29,11 @@ const Expenses = () => {
   const [sites, setSites] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("cash");
 
   useEffect(() => {
     fetchData();
@@ -45,7 +47,7 @@ const Expenses = () => {
 
   const fetchData = async () => {
     try {
-      const [expensesRes, sitesRes, vendorsRes, categoriesRes] = await Promise.all([
+      const [expensesRes, sitesRes, vendorsRes, categoriesRes, bankAccountsRes] = await Promise.all([
         supabase
           .from("expenses")
           .select("*, sites(site_name), vendors(name), categories(category_name)")
@@ -53,12 +55,14 @@ const Expenses = () => {
         supabase.from("sites").select("*"),
         supabase.from("vendors").select("*"),
         supabase.from("categories").select("*"),
+        supabase.from("bank_accounts").select("*"),
       ]);
 
       if (expensesRes.data) setExpenses(expensesRes.data);
       if (sitesRes.data) setSites(sitesRes.data);
       if (vendorsRes.data) setVendors(vendorsRes.data);
       if (categoriesRes.data) setCategories(categoriesRes.data);
+      if (bankAccountsRes.data) setBankAccounts(bankAccountsRes.data);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -70,7 +74,7 @@ const Expenses = () => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    const newExpense = {
+    const newExpense: any = {
       site_id: formData.get("site_id") as string,
       vendor_id: formData.get("vendor_id") as string,
       category_id: formData.get("category_id") as string,
@@ -78,8 +82,14 @@ const Expenses = () => {
       description: formData.get("description") as string,
       amount: parseFloat(formData.get("amount") as string),
       payment_status: formData.get("payment_status") as "paid" | "unpaid" | "partial",
+      payment_method: paymentMethod as "cash" | "bank_transfer",
       created_by: currentUser,
     };
+
+    // Add bank_account_id only if payment method is bank_transfer
+    if (paymentMethod === "bank_transfer") {
+      newExpense.bank_account_id = formData.get("bank_account_id") as string;
+    }
 
     const { error } = await supabase.from("expenses").insert([newExpense]);
 
@@ -224,7 +234,40 @@ const Expenses = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="payment_method">Payment Method</Label>
+                  <Select 
+                    name="payment_method" 
+                    defaultValue="cash"
+                    onValueChange={(value) => setPaymentMethod(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+              {paymentMethod === "bank_transfer" && (
+                <div className="space-y-2">
+                  <Label htmlFor="bank_account_id">Bank Account</Label>
+                  <Select name="bank_account_id" required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select bank account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bankAccounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.account_name} - {account.bank_name} (Balance: ₹{account.balance.toLocaleString()})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea name="description" placeholder="Enter expense details..." />

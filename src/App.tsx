@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
 import Sites from "./pages/Sites";
 import Vendors from "./pages/Vendors";
+import BankAccounts from "./pages/BankAccounts";
 import Reports from "./pages/Reports";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import NotFound from "./pages/NotFound";
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/expenses" element={<DashboardLayout><Expenses /></DashboardLayout>} />
           <Route path="/sites" element={<DashboardLayout><Sites /></DashboardLayout>} />
           <Route path="/vendors" element={<DashboardLayout><Vendors /></DashboardLayout>} />
+          <Route path="/bank-accounts" element={<DashboardLayout><BankAccounts /></DashboardLayout>} />
           <Route path="/reports" element={<DashboardLayout><Reports /></DashboardLayout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
