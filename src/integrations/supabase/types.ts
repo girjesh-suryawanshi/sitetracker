@@ -65,6 +65,53 @@ export type Database = {
         }
         Relationships: []
       }
+      credits: {
+        Row: {
+          amount: number
+          bank_account_id: string | null
+          category: string
+          created_at: string
+          created_by: string
+          date: string
+          description: string | null
+          id: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          bank_account_id?: string | null
+          category: string
+          created_at?: string
+          created_by: string
+          date: string
+          description?: string | null
+          id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string
+          date?: string
+          description?: string | null
+          id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credits_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
