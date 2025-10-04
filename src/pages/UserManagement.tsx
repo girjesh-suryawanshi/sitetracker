@@ -75,6 +75,36 @@ const UserManagement = () => {
       });
 
       setDialogOpen(false);
+      e.currentTarget.reset();
+      fetchProfiles();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleDelete = async (userId: string) => {
+    if (!confirm("Are you sure you want to delete this user?")) {
+      return;
+    }
+
+    try {
+      // Delete from profiles table (this will cascade due to foreign key)
+      const { error } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+
       fetchProfiles();
     } catch (error: any) {
       toast({
@@ -184,6 +214,7 @@ const UserManagement = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Created At</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -195,6 +226,15 @@ const UserManagement = () => {
                     </TableCell>
                     <TableCell>
                       {new Date(profile.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(profile.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
