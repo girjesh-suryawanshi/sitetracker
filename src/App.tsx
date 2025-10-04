@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
 import Credits from "./pages/Credits";
 import Sites from "./pages/Sites";
+import UserManagement from "./pages/UserManagement";
 import Vendors from "./pages/Vendors";
 import BankAccounts from "./pages/BankAccounts";
 import Reports from "./pages/Reports";
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/sites" element={<DashboardLayout><Sites /></DashboardLayout>} />
           <Route path="/vendors" element={<DashboardLayout><Vendors /></DashboardLayout>} />
           <Route path="/bank-accounts" element={<DashboardLayout><BankAccounts /></DashboardLayout>} />
+          <Route path="/users" element={<DashboardLayout><UserManagement /></DashboardLayout>} />
           <Route path="/reports" element={<DashboardLayout><Reports /></DashboardLayout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

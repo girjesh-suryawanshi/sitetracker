@@ -29,9 +29,15 @@ interface BankAccount {
   account_name: string;
 }
 
+interface Site {
+  id: string;
+  site_name: string;
+}
+
 const Credits = () => {
   const [credits, setCredits] = useState<Credit[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -74,6 +80,15 @@ const Credits = () => {
 
       if (bankAccountsError) throw bankAccountsError;
       setBankAccounts(bankAccountsData || []);
+
+      // Fetch sites
+      const { data: sitesData, error: sitesError } = await supabase
+        .from("sites")
+        .select("id, site_name")
+        .order("site_name");
+
+      if (sitesError) throw sitesError;
+      setSites(sitesData || []);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -177,13 +192,19 @@ const Credits = () => {
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Input
-                    id="category"
-                    name="category"
-                    placeholder="e.g., Client Payment, Loan, Investment"
-                    required
-                  />
+                  <Label htmlFor="category">Site</Label>
+                  <Select name="category" required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select site" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sites.map((site) => (
+                        <SelectItem key={site.id} value={site.site_name}>
+                          {site.site_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="date">Date</Label>
