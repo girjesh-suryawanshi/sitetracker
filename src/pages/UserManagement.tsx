@@ -22,6 +22,7 @@ const UserManagement = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string>("viewer");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -55,9 +56,8 @@ const UserManagement = () => {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const name = formData.get("name") as string;
-    const role = formData.get("role") as string;
 
-    if (!email || !password || !name || !role) {
+    if (!email || !password || !name || !selectedRole) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -67,12 +67,12 @@ const UserManagement = () => {
     }
 
     try {
-      // Create user using admin API
+      // Create user using auth signup
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { name, role },
+          data: { name, role: selectedRole },
           emailRedirectTo: `${window.location.origin}/`,
         },
       });
@@ -85,6 +85,7 @@ const UserManagement = () => {
       });
 
       setDialogOpen(false);
+      setSelectedRole("viewer");
       e.currentTarget.reset();
       fetchProfiles();
     } catch (error: any) {
@@ -102,13 +103,13 @@ const UserManagement = () => {
     }
 
     try {
-      // Delete from profiles table (this will cascade due to foreign key)
-      const { error } = await supabase
+      // First delete the profile (this will trigger cascade delete on auth.users)
+      const { error: profileError } = await supabase
         .from("profiles")
         .delete()
         .eq("id", userId);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
       toast({
         title: "Success",
@@ -187,7 +188,10 @@ const UserManagement = () => {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="role">Role</Label>
-                  <Select name="role" defaultValue="viewer">
+                  <Select 
+                    value={selectedRole} 
+                    onValueChange={setSelectedRole}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
