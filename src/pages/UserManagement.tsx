@@ -57,6 +57,15 @@ const UserManagement = () => {
     const name = formData.get("name") as string;
     const role = formData.get("role") as string;
 
+    if (!email || !password || !name || !role) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "All fields are required",
+      });
+      return;
+    }
+
     try {
       // Create user using admin API
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -82,7 +91,7 @@ const UserManagement = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to create user",
       });
     }
   };
