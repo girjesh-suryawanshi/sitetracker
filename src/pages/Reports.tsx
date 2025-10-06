@@ -132,8 +132,8 @@ const Reports = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Reports</h1>
-        <p className="text-muted-foreground">Generate and export expense reports</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Reports</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Generate and export expense reports</p>
       </div>
 
       <Card>
@@ -214,8 +214,8 @@ const Reports = () => {
                 </Select>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button type="submit" disabled={loading}>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button type="submit" disabled={loading} className="w-full sm:w-auto">
                 <Search className="w-4 h-4 mr-2" />
                 Generate Report
               </Button>
@@ -224,6 +224,7 @@ const Reports = () => {
                 variant="outline"
                 onClick={exportToCSV}
                 disabled={reportData.length === 0}
+                className="w-full sm:w-auto"
               >
                 <FileDown className="w-4 h-4 mr-2" />
                 Export CSV
@@ -244,7 +245,7 @@ const Reports = () => {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

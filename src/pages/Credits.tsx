@@ -170,19 +170,19 @@ const Credits = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Credits</h1>
-          <p className="text-muted-foreground">Manage income and credit entries</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Credits</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage income and credit entries</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Add Credit
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[525px]">
+          <DialogContent className="sm:max-w-[525px] max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
                 <DialogTitle>Add New Credit</DialogTitle>
@@ -281,7 +281,7 @@ const Credits = () => {
           <CardTitle>Recent Credits</CardTitle>
           <CardDescription>List of all credit entries</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {credits.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               No credits found. Add your first credit entry.

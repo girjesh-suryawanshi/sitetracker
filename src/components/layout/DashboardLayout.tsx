@@ -137,7 +137,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <SidebarTrigger />
             <div className="flex-1" />
           </header>
-          <div className="p-6">{children}</div>
+          <div className="p-4 sm:p-6">{children}</div>
         </main>
       </div>
     </SidebarProvider>
