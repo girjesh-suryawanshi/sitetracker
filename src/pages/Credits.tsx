@@ -313,7 +313,7 @@ const Credits = () => {
                       {credit.bank_accounts?.account_name || "-"}
                     </TableCell>
                     <TableCell className="text-right font-medium text-green-600 text-xs sm:text-sm whitespace-nowrap">
-                      ₹{credit.amount.toLocaleString()}
+                      ₹{credit.amount.toLocaleString('en-IN')}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button

@@ -334,7 +334,7 @@ const Expenses = () => {
                     <SelectContent>
                       {bankAccounts.map((account) => (
                         <SelectItem key={account.id} value={account.id}>
-                          {account.account_name} - {account.bank_name} (Balance: ₹{account.balance.toLocaleString()})
+                          {account.account_name} - {account.bank_name} (Balance: ₹{account.balance.toLocaleString('en-IN')})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -364,7 +364,7 @@ const Expenses = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit_site_id">Site</Label>
-                  <Select name="site_id" defaultValue={editingExpense.sites?.id || ""} required>
+                  <Select name="site_id" defaultValue={editingExpense.site_id || ""} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select site" />
                     </SelectTrigger>
@@ -379,7 +379,7 @@ const Expenses = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit_vendor_id">Vendor</Label>
-                  <Select name="vendor_id" defaultValue={editingExpense.vendors?.id || ""} required>
+                  <Select name="vendor_id" defaultValue={editingExpense.vendor_id || ""} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select vendor" />
                     </SelectTrigger>
@@ -394,7 +394,7 @@ const Expenses = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit_category_id">Category</Label>
-                  <Select name="category_id" defaultValue={editingExpense.categories?.id || ""} required>
+                  <Select name="category_id" defaultValue={editingExpense.category_id || ""} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -455,7 +455,7 @@ const Expenses = () => {
                     <SelectContent>
                       {bankAccounts.map((account) => (
                         <SelectItem key={account.id} value={account.id}>
-                          {account.account_name} - {account.bank_name} (Balance: ₹{account.balance.toLocaleString()})
+                          {account.account_name} - {account.bank_name} (Balance: ₹{account.balance.toLocaleString('en-IN')})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -510,7 +510,7 @@ const Expenses = () => {
                     <TableCell className="text-xs sm:text-sm">{expense.vendors.name}</TableCell>
                     <TableCell className="text-xs sm:text-sm">{expense.categories.category_name}</TableCell>
                     <TableCell className="max-w-xs truncate text-xs sm:text-sm">{expense.description || "-"}</TableCell>
-                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">₹{expense.amount.toLocaleString()}</TableCell>
+                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">₹{expense.amount.toLocaleString('en-IN')}</TableCell>
                     <TableCell>{getStatusBadge(expense.payment_status)}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">

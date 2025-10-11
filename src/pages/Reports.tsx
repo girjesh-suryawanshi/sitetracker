@@ -17,6 +17,14 @@ const Reports = () => {
   const [sites, setSites] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [filters, setFilters] = useState({
+    start_date: "",
+    end_date: "",
+    site_id: "all",
+    vendor_id: "all",
+    category_id: "all",
+    payment_status: "all",
+  });
 
   const fetchFilterOptions = async () => {
     const [sitesRes, vendorsRes, categoriesRes] = await Promise.all([
@@ -37,16 +45,6 @@ const Reports = () => {
   const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-
-    const formData = new FormData(e.currentTarget);
-    const filters: any = {
-      start_date: formData.get("start_date"),
-      end_date: formData.get("end_date"),
-      site_id: formData.get("site_id"),
-      vendor_id: formData.get("vendor_id"),
-      category_id: formData.get("category_id"),
-      payment_status: formData.get("payment_status"),
-    };
 
     try {
       // Fetch expenses
@@ -70,7 +68,7 @@ const Reports = () => {
         expensesQuery = expensesQuery.eq("category_id", filters.category_id);
       }
       if (filters.payment_status && filters.payment_status !== "all") {
-        expensesQuery = expensesQuery.eq("payment_status", filters.payment_status);
+        expensesQuery = expensesQuery.eq("payment_status", filters.payment_status as "paid" | "partial" | "unpaid");
       }
 
       // Fetch credits
@@ -183,15 +181,25 @@ const Reports = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="start_date">Start Date</Label>
-                <Input type="date" name="start_date" />
+                <Input 
+                  type="date" 
+                  name="start_date" 
+                  value={filters.start_date}
+                  onChange={(e) => setFilters({ ...filters, start_date: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="end_date">End Date</Label>
-                <Input type="date" name="end_date" />
+                <Input 
+                  type="date" 
+                  name="end_date" 
+                  value={filters.end_date}
+                  onChange={(e) => setFilters({ ...filters, end_date: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="payment_status">Payment Status</Label>
-                <Select name="payment_status" defaultValue="all">
+                <Select value={filters.payment_status} onValueChange={(value) => setFilters({ ...filters, payment_status: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
@@ -205,7 +213,7 @@ const Reports = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="site_id">Site</Label>
-                <Select name="site_id" defaultValue="all">
+                <Select value={filters.site_id} onValueChange={(value) => setFilters({ ...filters, site_id: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="All sites" />
                   </SelectTrigger>
@@ -221,7 +229,7 @@ const Reports = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="vendor_id">Vendor</Label>
-                <Select name="vendor_id" defaultValue="all">
+                <Select value={filters.vendor_id} onValueChange={(value) => setFilters({ ...filters, vendor_id: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="All vendors" />
                   </SelectTrigger>
@@ -237,7 +245,7 @@ const Reports = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category_id">Category</Label>
-                <Select name="category_id" defaultValue="all">
+                <Select value={filters.category_id} onValueChange={(value) => setFilters({ ...filters, category_id: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
@@ -277,19 +285,19 @@ const Reports = () => {
           <CardHeader>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <CardTitle>Report Results</CardTitle>
-              <div className="grid grid-cols-3 gap-4 text-right w-full sm:w-auto">
+                <div className="grid grid-cols-3 gap-4 text-right w-full sm:w-auto">
                 <div>
                   <p className="text-xs text-muted-foreground">Total Expenses</p>
-                  <p className="text-lg font-bold text-destructive">₹{totalExpenses.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-destructive">₹{totalExpenses.toLocaleString('en-IN')}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Total Credits</p>
-                  <p className="text-lg font-bold text-green-600">₹{totalCredits.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-green-600">₹{totalCredits.toLocaleString('en-IN')}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Net Amount</p>
                   <p className={`text-lg font-bold ${netAmount >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-                    ₹{netAmount.toLocaleString()}
+                    ₹{netAmount.toLocaleString('en-IN')}
                   </p>
                 </div>
               </div>
@@ -326,7 +334,7 @@ const Reports = () => {
                     <TableCell className="text-xs sm:text-sm">{row.type === "expense" ? row.categories?.category_name || "-" : "-"}</TableCell>
                     <TableCell className="max-w-xs truncate text-xs sm:text-sm">{row.description || "-"}</TableCell>
                     <TableCell className={`text-xs sm:text-sm whitespace-nowrap font-semibold ${row.type === "credit" ? "text-green-600" : "text-destructive"}`}>
-                      {row.type === "credit" ? "+" : "-"}₹{Number(row.amount).toLocaleString()}
+                      {row.type === "credit" ? "+" : "-"}₹{Number(row.amount).toLocaleString('en-IN')}
                     </TableCell>
                     <TableCell>
                       {row.payment_status && (

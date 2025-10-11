@@ -136,7 +136,7 @@ const Dashboard = () => {
             <IndianRupee className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">₹{stats.todayTotal.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold">₹{stats.todayTotal.toLocaleString('en-IN')}</div>
           </CardContent>
         </Card>
 
@@ -146,7 +146,7 @@ const Dashboard = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">₹{stats.monthTotal.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold">₹{stats.monthTotal.toLocaleString('en-IN')}</div>
           </CardContent>
         </Card>
 
@@ -166,7 +166,7 @@ const Dashboard = () => {
             <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-warning">₹{stats.unpaidTotal.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold text-warning">₹{stats.unpaidTotal.toLocaleString('en-IN')}</div>
           </CardContent>
         </Card>
       </div>
@@ -184,7 +184,7 @@ const Dashboard = () => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(value) => `₹${Number(value).toLocaleString()}`} />
+                  <Tooltip formatter={(value) => `₹${Number(value).toLocaleString('en-IN')}`} />
                   <Line type="monotone" dataKey="amount" stroke="hsl(var(--chart-1))" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
@@ -218,7 +218,7 @@ const Dashboard = () => {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => `₹${Number(value).toLocaleString()}`} />
+                  <Tooltip formatter={(value) => `₹${Number(value).toLocaleString('en-IN')}`} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
