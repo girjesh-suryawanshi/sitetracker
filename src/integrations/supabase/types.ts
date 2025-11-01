@@ -76,6 +76,7 @@ export type Database = {
           description: string | null
           id: string
           payment_method: Database["public"]["Enums"]["payment_method"]
+          site_id: string | null
           updated_at: string
         }
         Insert: {
@@ -88,6 +89,7 @@ export type Database = {
           description?: string | null
           id?: string
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          site_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -100,6 +102,7 @@ export type Database = {
           description?: string | null
           id?: string
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          site_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -108,6 +111,13 @@ export type Database = {
             columns: ["bank_account_id"]
             isOneToOne: false
             referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credits_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
             referencedColumns: ["id"]
           },
         ]

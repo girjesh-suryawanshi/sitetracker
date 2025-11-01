@@ -107,6 +107,10 @@ const Credits = () => {
     const paymentMethodValue = formData.get("payment_method") as "cash" | "bank_transfer";
     const bankAccountIdValue = formData.get("bank_account_id") as string;
     const descriptionValue = formData.get("description") as string;
+    const siteIdValue = formData.get("site_id") as string;
+    
+    // Find the site name for the category field
+    const selectedSite = sites.find(s => s.id === siteIdValue);
     
     const newCredit = {
       created_by: currentUserId,
@@ -115,7 +119,8 @@ const Credits = () => {
       payment_method: paymentMethodValue,
       bank_account_id: bankAccountIdValue || null,
       description: descriptionValue || null,
-      category: formData.get("category") as string,
+      category: selectedSite?.site_name || "",
+      site_id: siteIdValue || null,
     };
 
     try {
@@ -192,14 +197,14 @@ const Credits = () => {
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="category">Site</Label>
-                  <Select name="category" required>
+                  <Label htmlFor="site_id">Site</Label>
+                  <Select name="site_id" required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select site" />
                     </SelectTrigger>
                     <SelectContent>
                       {sites.map((site) => (
-                        <SelectItem key={site.id} value={site.site_name}>
+                        <SelectItem key={site.id} value={site.id}>
                           {site.site_name}
                         </SelectItem>
                       ))}

@@ -71,16 +71,19 @@ const Reports = () => {
         expensesQuery = expensesQuery.eq("payment_status", filters.payment_status as "paid" | "partial" | "unpaid");
       }
 
-      // Fetch credits (always, filtered by date only)
+      // Fetch credits (filtered by date and site if applicable)
       let creditsQuery = supabase
         .from("credits")
-        .select("*");
+        .select("*, sites(site_name)");
 
       if (filters.start_date) {
         creditsQuery = creditsQuery.gte("date", filters.start_date);
       }
       if (filters.end_date) {
         creditsQuery = creditsQuery.lte("date", filters.end_date);
+      }
+      if (filters.site_id && filters.site_id !== "all") {
+        creditsQuery = creditsQuery.eq("site_id", filters.site_id);
       }
 
       const [expensesResult, creditsResult] = await Promise.all([
@@ -328,7 +331,7 @@ const Reports = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-xs sm:text-sm">
-                      {row.type === "expense" ? row.sites?.site_name || "-" : row.category || "-"}
+                      {row.type === "expense" ? row.sites?.site_name || "-" : row.sites?.site_name || row.category || "-"}
                     </TableCell>
                     <TableCell className="text-xs sm:text-sm">{row.type === "expense" ? row.vendors?.name || "-" : "-"}</TableCell>
                     <TableCell className="text-xs sm:text-sm">{row.type === "expense" ? row.categories?.category_name || "-" : "-"}</TableCell>
