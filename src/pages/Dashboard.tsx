@@ -1,14 +1,22 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { IndianRupee, TrendingUp, Building2, AlertTriangle } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Pie, PieChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 interface DashboardStats {
   todayTotal: number;
   monthTotal: number;
   unpaidTotal: number;
   sitesCount: number;
+}
+
+interface SiteSummary {
+  site_name: string;
+  received: number;
+  expense: number;
+  balance: number;
 }
 
 const Dashboard = () => {
@@ -19,7 +27,7 @@ const Dashboard = () => {
     sitesCount: 0,
   });
   const [categoryData, setCategoryData] = useState<any[]>([]);
-  const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [siteSummary, setSiteSummary] = useState<SiteSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -60,14 +68,18 @@ const Dashboard = () => {
         .select("amount, categories(category_name)")
         .gte("date", firstDayOfMonth);
 
-      // Fetch monthly trend (last 6 months)
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-      const { data: monthlyExpenses } = await supabase
+      // Fetch site-wise summary
+      const { data: allSites } = await supabase
+        .from("sites")
+        .select("id, site_name");
+
+      const { data: allExpenses } = await supabase
         .from("expenses")
-        .select("amount, date")
-        .gte("date", sixMonthsAgo.toISOString().split("T")[0])
-        .order("date");
+        .select("site_id, amount");
+
+      const { data: allCredits } = await supabase
+        .from("credits")
+        .select("site_id, amount");
 
       // Process data
       const todayTotal = todayExpenses?.reduce((sum, exp) => sum + Number(exp.amount), 0) || 0;
@@ -85,16 +97,24 @@ const Dashboard = () => {
         value,
       }));
 
-      // Process monthly trend
-      const monthMap = new Map();
-      monthlyExpenses?.forEach((exp: any) => {
-        const month = new Date(exp.date).toLocaleDateString("en-US", { month: "short" });
-        monthMap.set(month, (monthMap.get(month) || 0) + Number(exp.amount));
+      // Process site-wise summary
+      const siteSummaryData: SiteSummary[] = [];
+      allSites?.forEach((site) => {
+        const siteExpenses = allExpenses
+          ?.filter((exp) => exp.site_id === site.id)
+          .reduce((sum, exp) => sum + Number(exp.amount), 0) || 0;
+        
+        const siteCredits = allCredits
+          ?.filter((credit) => credit.site_id === site.id)
+          .reduce((sum, credit) => sum + Number(credit.amount), 0) || 0;
+
+        siteSummaryData.push({
+          site_name: site.site_name,
+          received: siteCredits,
+          expense: siteExpenses,
+          balance: siteCredits - siteExpenses,
+        });
       });
-      const monthlyChartData = Array.from(monthMap.entries()).map(([month, amount]) => ({
-        month,
-        amount,
-      }));
 
       setStats({
         todayTotal,
@@ -103,7 +123,7 @@ const Dashboard = () => {
         sitesCount: sites?.length || 0,
       });
       setCategoryData(categoryChartData);
-      setMonthlyData(monthlyChartData);
+      setSiteSummary(siteSummaryData);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
@@ -175,19 +195,50 @@ const Dashboard = () => {
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Monthly Trend</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Site-wise Summary</CardTitle>
           </CardHeader>
           <CardContent className="px-2 sm:px-6">
-            {monthlyData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(value) => `₹${Number(value).toLocaleString('en-IN')}`} />
-                  <Line type="monotone" dataKey="amount" stroke="hsl(var(--chart-1))" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
+            {siteSummary.length > 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs sm:text-sm">SITE</TableHead>
+                      <TableHead className="text-xs sm:text-sm text-right">Received</TableHead>
+                      <TableHead className="text-xs sm:text-sm text-right">EXPENSE</TableHead>
+                      <TableHead className="text-xs sm:text-sm text-right">BALANCE</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {siteSummary.map((site, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="text-xs sm:text-sm font-medium">{site.site_name}</TableCell>
+                        <TableCell className="text-xs sm:text-sm text-right">
+                          ₹{site.received.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-xs sm:text-sm text-right">
+                          ₹{site.expense.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className={`text-xs sm:text-sm text-right font-medium ${site.balance < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                          ₹{site.balance.toLocaleString('en-IN')}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="font-bold bg-muted/50">
+                      <TableCell className="text-xs sm:text-sm">TOTAL</TableCell>
+                      <TableCell className="text-xs sm:text-sm text-right">
+                        ₹{siteSummary.reduce((sum, site) => sum + site.received, 0).toLocaleString('en-IN')}
+                      </TableCell>
+                      <TableCell className="text-xs sm:text-sm text-right">
+                        ₹{siteSummary.reduce((sum, site) => sum + site.expense, 0).toLocaleString('en-IN')}
+                      </TableCell>
+                      <TableCell className={`text-xs sm:text-sm text-right ${siteSummary.reduce((sum, site) => sum + site.balance, 0) < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                        ₹{siteSummary.reduce((sum, site) => sum + site.balance, 0).toLocaleString('en-IN')}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
             ) : (
               <div className="flex items-center justify-center h-[250px] text-sm text-muted-foreground">
                 No data available
