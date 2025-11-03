@@ -674,7 +674,6 @@ const Expenses = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs sm:text-sm">S.No</TableHead>
                   <TableHead className="text-xs sm:text-sm">Date</TableHead>
                   <TableHead className="text-xs sm:text-sm">Site</TableHead>
                   <TableHead className="text-xs sm:text-sm">Vendor</TableHead>
@@ -688,14 +687,13 @@ const Expenses = () => {
             <TableBody>
               {expenses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-xs sm:text-sm text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-xs sm:text-sm text-muted-foreground py-8">
                     No expenses found. Add your first expense to get started.
                   </TableCell>
                 </TableRow>
               ) : (
-                expenses.map((expense, index) => (
+                expenses.map((expense) => (
                   <TableRow key={expense.id}>
-                    <TableCell className="text-xs sm:text-sm">{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
                     <TableCell className="text-xs sm:text-sm whitespace-nowrap">{new Date(expense.date).toLocaleDateString()}</TableCell>
                     <TableCell className="text-xs sm:text-sm">{expense.sites.site_name}</TableCell>
                     <TableCell className="text-xs sm:text-sm">{expense.vendors.name}</TableCell>
