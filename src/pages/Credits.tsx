@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Pencil } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
 interface Credit {
@@ -40,8 +40,11 @@ const Credits = () => {
   const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingCredit, setEditingCredit] = useState<Credit | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [editPaymentMethod, setEditPaymentMethod] = useState("cash");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -134,6 +137,59 @@ const Credits = () => {
       });
 
       setDialogOpen(false);
+      fetchData();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleEdit = async (credit: Credit) => {
+    setEditingCredit(credit);
+    setEditPaymentMethod(credit.payment_method);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingCredit) return;
+
+    const formData = new FormData(e.currentTarget);
+    const paymentMethodValue = formData.get("payment_method") as "cash" | "bank_transfer";
+    const bankAccountIdValue = formData.get("bank_account_id") as string;
+    const descriptionValue = formData.get("description") as string;
+    const siteIdValue = formData.get("site_id") as string;
+    
+    const selectedSite = sites.find(s => s.id === siteIdValue);
+    
+    const updatedCredit = {
+      date: formData.get("date") as string,
+      amount: parseFloat(formData.get("amount") as string),
+      payment_method: paymentMethodValue,
+      bank_account_id: paymentMethodValue === "bank_transfer" ? bankAccountIdValue : null,
+      description: descriptionValue || null,
+      category: selectedSite?.site_name || "",
+      site_id: siteIdValue || null,
+    };
+
+    try {
+      const { error } = await supabase
+        .from("credits")
+        .update(updatedCredit)
+        .eq("id", editingCredit.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Credit updated successfully",
+      });
+
+      setEditDialogOpen(false);
+      setEditingCredit(null);
       fetchData();
     } catch (error: any) {
       toast({
@@ -281,6 +337,105 @@ const Credits = () => {
         </Dialog>
       </div>
 
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[525px] max-h-[90vh] overflow-y-auto">
+          {editingCredit && (
+            <form onSubmit={handleUpdate}>
+              <DialogHeader>
+                <DialogTitle>Edit Credit</DialogTitle>
+                <DialogDescription>
+                  Update credit/income details below
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_site_id">Site</Label>
+                  <Select name="site_id" defaultValue={editingCredit.category} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select site" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sites.map((site) => (
+                        <SelectItem key={site.id} value={site.id}>
+                          {site.site_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_date">Date</Label>
+                  <Input
+                    id="edit_date"
+                    name="date"
+                    type="date"
+                    defaultValue={editingCredit.date}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_amount">Amount</Label>
+                  <Input
+                    id="edit_amount"
+                    name="amount"
+                    type="number"
+                    step="0.01"
+                    defaultValue={editingCredit.amount}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_payment_method">Payment Method</Label>
+                  <Select
+                    name="payment_method"
+                    onValueChange={setEditPaymentMethod}
+                    defaultValue={editingCredit.payment_method}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {editPaymentMethod === "bank_transfer" && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit_bank_account_id">Bank Account</Label>
+                    <Select name="bank_account_id" defaultValue={editingCredit.bank_account_id || ""}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select bank account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {bankAccounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.account_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_description">Description</Label>
+                  <Textarea
+                    id="edit_description"
+                    name="description"
+                    placeholder="Additional details"
+                    defaultValue={editingCredit.description || ""}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit">Update Credit</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <CardTitle>Recent Credits</CardTitle>
@@ -321,14 +476,24 @@ const Credits = () => {
                       ₹{credit.amount.toLocaleString('en-IN')}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleDelete(credit.id)}
-                      >
-                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEdit(credit)}
+                        >
+                          <Pencil className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleDelete(credit.id)}
+                        >
+                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
