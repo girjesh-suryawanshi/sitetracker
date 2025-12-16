@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -6,6 +7,7 @@ import { Building2, Wallet, TrendingUp, TrendingDown, DollarSign } from "lucide-
 import { Badge } from "@/components/ui/badge";
 
 interface SiteSummary {
+  site_id: string;
   site_name: string;
   received: number;
   expense: number;
@@ -21,6 +23,7 @@ interface AccountSummary {
 }
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [siteSummary, setSiteSummary] = useState<SiteSummary[]>([]);
   const [accountSummary, setAccountSummary] = useState<AccountSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +67,7 @@ const Dashboard = () => {
           .reduce((sum, credit) => sum + Number(credit.amount), 0) || 0;
 
         siteSummaryData.push({
+          site_id: site.id,
           site_name: site.site_name,
           received: siteCredits,
           expense: siteExpenses,
@@ -237,9 +241,12 @@ const Dashboard = () => {
                     {siteSummary.map((site, index) => (
                       <TableRow key={index} className="hover:bg-muted/30">
                         <TableCell className="text-xs sm:text-sm font-medium py-4">
-                          <div className="flex items-center gap-2">
+                          <div 
+                            className="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+                            onClick={() => navigate(`/reports?site_id=${site.site_id}`)}
+                          >
                             <div className="h-2 w-2 rounded-full bg-primary" />
-                            {site.site_name}
+                            <span className="underline underline-offset-2">{site.site_name}</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-xs sm:text-sm text-right text-success font-medium">
