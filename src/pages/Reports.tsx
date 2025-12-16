@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 
 const Reports = () => {
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [reportData, setReportData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [sites, setSites] = useState<any[]>([]);
@@ -30,6 +32,7 @@ const Reports = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
+  const initialSearchDone = useRef(false);
 
   const fetchFilterOptions = async () => {
     const [sitesRes, vendorsRes, categoriesRes, bankAccountsRes] = await Promise.all([
@@ -43,14 +46,36 @@ const Reports = () => {
     if (vendorsRes.data) setVendors(vendorsRes.data);
     if (categoriesRes.data) setCategories(categoriesRes.data);
     if (bankAccountsRes.data) setBankAccounts(bankAccountsRes.data);
+    
+    return { sites: sitesRes.data || [] };
   };
 
   useEffect(() => {
-    fetchFilterOptions();
-  }, []);
+    const init = async () => {
+      const { sites: sitesData } = await fetchFilterOptions();
+      
+      // Check for site_id in URL params
+      const siteIdFromUrl = searchParams.get("site_id");
+      if (siteIdFromUrl && !initialSearchDone.current) {
+        // Verify the site exists
+        const siteExists = sitesData.some((s: any) => s.id === siteIdFromUrl);
+        if (siteExists) {
+          setFilters(prev => ({ ...prev, site_id: siteIdFromUrl }));
+          initialSearchDone.current = true;
+        }
+      }
+    };
+    init();
+  }, [searchParams]);
 
-  const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  // Auto-trigger search when site_id is set from URL
+  useEffect(() => {
+    if (initialSearchDone.current && filters.site_id !== "all") {
+      performSearch();
+    }
+  }, [filters.site_id]);
+
+  const performSearch = async () => {
     setLoading(true);
     setCurrentPage(1); // Reset to first page on new search
 
@@ -162,6 +187,11 @@ const Reports = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    performSearch();
   };
 
   const exportToCSV = () => {
