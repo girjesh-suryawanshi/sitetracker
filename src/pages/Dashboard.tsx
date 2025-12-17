@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Building2, Wallet, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { SiteDetailsModal } from "@/components/dashboard/SiteDetailsModal";
 
 interface SiteSummary {
   site_name: string;
@@ -24,6 +25,7 @@ const Dashboard = () => {
   const [siteSummary, setSiteSummary] = useState<SiteSummary[]>([]);
   const [accountSummary, setAccountSummary] = useState<AccountSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSite, setSelectedSite] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -237,10 +239,13 @@ const Dashboard = () => {
                     {siteSummary.map((site, index) => (
                       <TableRow key={index} className="hover:bg-muted/30">
                         <TableCell className="text-xs sm:text-sm font-medium py-4">
-                          <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setSelectedSite(site.site_name)}
+                            className="flex items-center gap-2 hover:text-primary hover:underline transition-colors text-left"
+                          >
                             <div className="h-2 w-2 rounded-full bg-primary" />
                             {site.site_name}
-                          </div>
+                          </button>
                         </TableCell>
                         <TableCell className="text-xs sm:text-sm text-right text-success font-medium">
                           ₹{site.received.toLocaleString('en-IN')}
@@ -358,6 +363,13 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Site Details Modal */}
+      <SiteDetailsModal
+        open={!!selectedSite}
+        onOpenChange={(open) => !open && setSelectedSite(null)}
+        siteName={selectedSite || ""}
+      />
     </div>
   );
 };
