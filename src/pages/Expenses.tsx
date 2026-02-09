@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -22,9 +22,12 @@ interface Expense {
   site_id?: string;
   vendor_id?: string;
   category_id?: string;
-  sites: { site_name: string; id?: string };
-  vendors: { name: string; id?: string };
-  categories: { category_name: string; id?: string };
+  payment_method?: string;
+  bank_account_id?: string;
+  site: { site_name: string; id?: string };
+  vendor: { name: string; id?: string };
+  category: { category_name: string; id?: string };
+  bankAccount?: { account_name: string; bank_name: string };
 }
 
 const Expenses = () => {
@@ -37,16 +40,12 @@ const Expenses = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [editPaymentMethod, setEditPaymentMethod] = useState<string>("cash");
-  
+
   // Pagination and filters
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const itemsPerPage = 10;
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSite, setFilterSite] = useState<string>("all");
   const [filterVendor, setFilterVendor] = useState<string>("all");
@@ -58,91 +57,68 @@ const Expenses = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    getCurrentUser();
+    fetchMasterData();
   }, []);
 
   useEffect(() => {
-    fetchData();
-  }, [currentPage, filterSite, filterVendor, filterCategory, filterStatus, filterBankAccount, dateFrom, dateTo, searchQuery]);
+    fetchExpenses();
+  }, [filterSite, filterVendor, filterCategory, filterStatus, filterBankAccount, dateFrom, dateTo]);
 
-  const getCurrentUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) setCurrentUser(user.id);
+  const fetchMasterData = async () => {
+    try {
+      const [sitesRes, vendorsRes, categoriesRes, bankAccountsRes] = await Promise.all([
+        api.get('/api/sites'),
+        api.get('/api/vendors'),
+        api.get('/api/categories'),
+        api.get('/api/bank-accounts')
+      ]);
+      setSites(sitesRes.data);
+      setVendors(vendorsRes.data);
+      setCategories(categoriesRes.data);
+      setBankAccounts(bankAccountsRes.data);
+    } catch (error) {
+      console.error("Error fetching master data:", error);
+    }
   };
 
-  const fetchData = async () => {
+  const fetchExpenses = async () => {
+    setLoading(true);
     try {
-      // Build query with filters
-      let query = supabase
-        .from("expenses")
-        .select("*, sites(site_name), vendors(name), categories(category_name)", { count: "exact" });
-
-      // Apply filters
-      if (filterSite !== "all") {
-        query = query.eq("site_id", filterSite);
-      }
-      if (filterVendor !== "all") {
-        query = query.eq("vendor_id", filterVendor);
-      }
-      if (filterCategory !== "all") {
-        query = query.eq("category_id", filterCategory);
-      }
-      if (filterStatus !== "all") {
-        query = query.eq("payment_status", filterStatus as "paid" | "unpaid" | "partial");
-      }
-      if (filterBankAccount !== "all") {
-        if (filterBankAccount === "cash") {
-          query = query.eq("payment_method", "cash");
-        } else {
-          query = query.eq("bank_account_id", filterBankAccount);
+      const params = new URLSearchParams();
+      if (filterSite !== 'all') params.append('site_id', filterSite);
+      if (filterVendor !== 'all') params.append('vendor_id', filterVendor);
+      if (filterCategory !== 'all') params.append('category_id', filterCategory);
+      if (filterStatus !== 'all') params.append('payment_status', filterStatus);
+      if (filterBankAccount !== 'all') {
+        if (filterBankAccount !== 'cash') {
+          params.append('bank_account_id', filterBankAccount);
         }
       }
-      if (dateFrom) {
-        query = query.gte("date", dateFrom);
-      }
-      if (dateTo) {
-        query = query.lte("date", dateTo);
-      }
-      if (searchQuery) {
-        query = query.or(`description.ilike.%${searchQuery}%`);
-      }
+      if (dateFrom) params.append('date_from', dateFrom);
+      if (dateTo) params.append('date_to', dateTo);
 
-      // Apply pagination
-      const from = (currentPage - 1) * itemsPerPage;
-      const to = from + itemsPerPage - 1;
-      
-      query = query
-        .order("date", { ascending: false })
-        .range(from, to);
-
-      const [expensesRes, sitesRes, vendorsRes, categoriesRes, bankAccountsRes] = await Promise.all([
-        query,
-        supabase.from("sites").select("*"),
-        supabase.from("vendors").select("*"),
-        supabase.from("categories").select("*"),
-        supabase.from("bank_accounts").select("*"),
-      ]);
-
-      if (expensesRes.data) setExpenses(expensesRes.data);
-      if (expensesRes.count !== null) {
-        setTotalCount(expensesRes.count);
-        setTotalPages(Math.ceil(expensesRes.count / itemsPerPage));
-      }
-      if (sitesRes.data) setSites(sitesRes.data);
-      if (vendorsRes.data) setVendors(vendorsRes.data);
-      if (categoriesRes.data) setCategories(categoriesRes.data);
-      if (bankAccountsRes.data) setBankAccounts(bankAccountsRes.data);
+      const response = await api.get(`/expenses?${params.toString()}`);
+      setExpenses(response.data);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching expenses:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch expenses",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFilterChange = () => {
-    setCurrentPage(1);
-    fetchData();
-  };
+  // Client-side filtering for search & pagination
+  const filteredExpenses = expenses.filter(expense =>
+    !searchQuery || (expense.description && expense.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
+  const paginatedExpenses = filteredExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const clearFilters = () => {
     setSearchQuery("");
@@ -154,6 +130,7 @@ const Expenses = () => {
     setDateFrom("");
     setDateTo("");
     setCurrentPage(1);
+    fetchExpenses(); // Fetch all again
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -169,51 +146,32 @@ const Expenses = () => {
       amount: parseFloat(formData.get("amount") as string),
       payment_status: formData.get("payment_status") as "paid" | "unpaid" | "partial",
       payment_method: paymentMethod as "cash" | "bank_transfer",
-      created_by: currentUser,
     };
 
-    // Add bank_account_id only if payment method is bank_transfer
     if (paymentMethod === "bank_transfer") {
       newExpense.bank_account_id = formData.get("bank_account_id") as string;
     }
 
-    const { error } = await supabase.from("expenses").insert([newExpense]);
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    } else {
+    try {
+      await api.post('/expenses', newExpense);
       toast({
         title: "Success",
         description: "Expense added successfully",
       });
       setDialogOpen(false);
-      fetchData();
-    }
-  };
-
-  const handleEdit = async (expense: Expense) => {
-    // Fetch full expense data
-    const { data, error } = await supabase
-      .from("expenses")
-      .select("*")
-      .eq("id", expense.id)
-      .single();
-
-    if (error) {
+      fetchExpenses();
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.response?.data?.error || "Failed to add expense",
       });
-      return;
     }
+  };
 
-    setEditingExpense({ ...expense, ...data });
-    setEditPaymentMethod(data.payment_method || "cash");
+  const handleEdit = (expense: Expense) => {
+    setEditingExpense(expense);
+    setEditPaymentMethod(expense.payment_method || "cash");
     setEditDialogOpen(true);
   };
 
@@ -240,43 +198,38 @@ const Expenses = () => {
       updatedExpense.bank_account_id = null;
     }
 
-    const { error } = await supabase
-      .from("expenses")
-      .update(updatedExpense)
-      .eq("id", editingExpense.id);
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    } else {
+    try {
+      await api.put(`/expenses/${editingExpense.id}`, updatedExpense);
       toast({
         title: "Success",
         description: "Expense updated successfully",
       });
       setEditDialogOpen(false);
       setEditingExpense(null);
-      fetchData();
+      fetchExpenses();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.error || "Failed to update expense",
+      });
     }
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("expenses").delete().eq("id", id);
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    } else {
+    try {
+      await api.delete(`/expenses/${id}`);
       toast({
         title: "Success",
         description: "Expense deleted successfully",
       });
-      fetchData();
+      fetchExpenses();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.error || "Failed to delete expense",
+      });
     }
   };
 
@@ -293,7 +246,7 @@ const Expenses = () => {
     );
   };
 
-  if (loading) {
+  if (loading && expenses.length === 0) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -389,8 +342,8 @@ const Expenses = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="payment_method">Payment Method</Label>
-                  <Select 
-                    name="payment_method" 
+                  <Select
+                    name="payment_method"
                     defaultValue="cash"
                     onValueChange={(value) => setPaymentMethod(value)}
                   >
@@ -414,7 +367,7 @@ const Expenses = () => {
                     <SelectContent>
                       {bankAccounts.map((account) => (
                         <SelectItem key={account.id} value={account.id}>
-                          {account.account_name} - {account.bank_name} (Balance: ₹{account.balance.toLocaleString('en-IN')})
+                          {account.account_name} - {account.bank_name} (Balance: ₹{Number(account.balance).toLocaleString('en-IN')})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -489,7 +442,7 @@ const Expenses = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit_date">Date</Label>
-                  <Input type="date" name="date" defaultValue={editingExpense.date} required />
+                  <Input type="date" name="date" defaultValue={editingExpense.date ? new Date(editingExpense.date).toISOString().split('T')[0] : ''} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit_amount">Amount (₹)</Label>
@@ -510,8 +463,8 @@ const Expenses = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit_payment_method">Payment Method</Label>
-                  <Select 
-                    name="payment_method" 
+                  <Select
+                    name="payment_method"
                     defaultValue={editPaymentMethod}
                     onValueChange={(value) => setEditPaymentMethod(value)}
                   >
@@ -535,7 +488,7 @@ const Expenses = () => {
                     <SelectContent>
                       {bankAccounts.map((account) => (
                         <SelectItem key={account.id} value={account.id}>
-                          {account.account_name} - {account.bank_name} (Balance: ₹{account.balance.toLocaleString('en-IN')})
+                          {account.account_name} - {account.bank_name} (Balance: ₹{Number(account.balance).toLocaleString('en-IN')})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -559,7 +512,7 @@ const Expenses = () => {
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <CardTitle>Recent Expenses ({totalCount})</CardTitle>
+            <CardTitle>Recent Expenses ({filteredExpenses.length})</CardTitle>
             <Button
               variant="outline"
               size="sm"
@@ -569,7 +522,7 @@ const Expenses = () => {
               {showFilters ? "Hide" : "Show"} Filters
             </Button>
           </div>
-          
+
           {showFilters && (
             <div className="mt-4 space-y-4">
               {/* Search */}
@@ -711,48 +664,48 @@ const Expenses = () => {
                   <TableHead className="text-xs sm:text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-            <TableBody>
-              {expenses.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-xs sm:text-sm text-muted-foreground py-8">
-                    No expenses found. Add your first expense to get started.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                expenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">{new Date(expense.date).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-xs sm:text-sm">{expense.sites.site_name}</TableCell>
-                    <TableCell className="text-xs sm:text-sm">{expense.vendors.name}</TableCell>
-                    <TableCell className="text-xs sm:text-sm">{expense.categories.category_name}</TableCell>
-                    <TableCell className="max-w-xs truncate text-xs sm:text-sm">{expense.description || "-"}</TableCell>
-                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">₹{expense.amount.toLocaleString('en-IN')}</TableCell>
-                    <TableCell>{getStatusBadge(expense.payment_status)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleEdit(expense)}
-                        >
-                          <Pencil className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleDelete(expense.id)}
-                        >
-                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </Button>
-                      </div>
+              <TableBody>
+                {paginatedExpenses.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-xs sm:text-sm text-muted-foreground py-8">
+                      No expenses found. Add your first expense to get started.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  paginatedExpenses.map((expense) => (
+                    <TableRow key={expense.id}>
+                      <TableCell className="text-xs sm:text-sm whitespace-nowrap">{new Date(expense.date).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">{expense.site?.site_name}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">{expense.vendor?.name}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">{expense.category?.category_name}</TableCell>
+                      <TableCell className="max-w-xs truncate text-xs sm:text-sm">{expense.description || "-"}</TableCell>
+                      <TableCell className="text-xs sm:text-sm whitespace-nowrap">₹{Number(expense.amount).toLocaleString('en-IN')}</TableCell>
+                      <TableCell>{getStatusBadge(expense.payment_status)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleEdit(expense)}
+                          >
+                            <Pencil className="w-3 h-3 sm:w-4 sm:h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDelete(expense.id)}
+                          >
+                            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
 
           {/* Pagination */}
@@ -766,7 +719,7 @@ const Expenses = () => {
                       className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                     />
                   </PaginationItem>
-                  
+
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
                     // Show first page, last page, current page, and pages around current
                     if (

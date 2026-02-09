@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,104 +32,50 @@ const Reports = () => {
   const [itemsPerPage, setItemsPerPage] = useState(25);
 
   const fetchFilterOptions = async () => {
-    const [sitesRes, vendorsRes, categoriesRes, bankAccountsRes] = await Promise.all([
-      supabase.from("sites").select("*"),
-      supabase.from("vendors").select("*"),
-      supabase.from("categories").select("*"),
-      supabase.from("bank_accounts").select("*").order("account_name"),
-    ]);
+    try {
+      const [sitesRes, vendorsRes, categoriesRes, bankAccountsRes] = await Promise.all([
+        api.get('/api/sites'),
+        api.get('/api/vendors'),
+        api.get('/api/categories'),
+        api.get('/api/bank-accounts')
+      ]);
 
-    if (sitesRes.data) setSites(sitesRes.data);
-    if (vendorsRes.data) setVendors(vendorsRes.data);
-    if (categoriesRes.data) setCategories(categoriesRes.data);
-    if (bankAccountsRes.data) setBankAccounts(bankAccountsRes.data);
+      setSites(sitesRes.data);
+      setVendors(vendorsRes.data);
+      setCategories(categoriesRes.data);
+      setBankAccounts(bankAccountsRes.data);
+    } catch (error) {
+      console.error("Error fetching filter options", error);
+    }
   };
 
   useEffect(() => {
     fetchFilterOptions();
   }, []);
 
-  const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSearch = async (e?: React.FormEvent<HTMLFormElement>) => {
+    if (e) e.preventDefault();
     setLoading(true);
     setCurrentPage(1); // Reset to first page on new search
 
     try {
-      // Fetch expenses
-      let expensesQuery = supabase
-        .from("expenses")
-        .select("*, sites(site_name), vendors(name), categories(category_name), bank_accounts(account_name)");
+      const params = new URLSearchParams();
+      if (filters.start_date) params.append('start_date', filters.start_date);
+      if (filters.end_date) params.append('end_date', filters.end_date);
+      if (filters.site_id !== "all") params.append('site_id', filters.site_id);
+      if (filters.vendor_id !== "all") params.append('vendor_id', filters.vendor_id);
+      if (filters.category_id !== "all") params.append('category_id', filters.category_id);
+      if (filters.payment_status !== "all") params.append('payment_status', filters.payment_status);
+      if (filters.bank_account_id !== "all") params.append('bank_account_id', filters.bank_account_id);
 
-      if (filters.start_date) {
-        expensesQuery = expensesQuery.gte("date", filters.start_date);
-      }
-      if (filters.end_date) {
-        expensesQuery = expensesQuery.lte("date", filters.end_date);
-      }
-      if (filters.site_id && filters.site_id !== "all") {
-        expensesQuery = expensesQuery.eq("site_id", filters.site_id);
-      }
-      if (filters.vendor_id && filters.vendor_id !== "all") {
-        expensesQuery = expensesQuery.eq("vendor_id", filters.vendor_id);
-      }
-      if (filters.category_id && filters.category_id !== "all") {
-        expensesQuery = expensesQuery.eq("category_id", filters.category_id);
-      }
-      if (filters.payment_status && filters.payment_status !== "all") {
-        expensesQuery = expensesQuery.eq("payment_status", filters.payment_status as "paid" | "partial" | "unpaid");
-      }
-      if (filters.bank_account_id && filters.bank_account_id !== "all") {
-        expensesQuery = expensesQuery.eq("bank_account_id", filters.bank_account_id);
-      }
-
-      // Fetch credits (filtered by date and site if applicable)
-      let creditsQuery = supabase
-        .from("credits")
-        .select("*, sites(site_name), bank_accounts(account_name)");
-
-      if (filters.start_date) {
-        creditsQuery = creditsQuery.gte("date", filters.start_date);
-      }
-      if (filters.end_date) {
-        creditsQuery = creditsQuery.lte("date", filters.end_date);
-      }
-      if (filters.site_id && filters.site_id !== "all") {
-        creditsQuery = creditsQuery.eq("site_id", filters.site_id);
-      }
-      if (filters.bank_account_id && filters.bank_account_id !== "all") {
-        creditsQuery = creditsQuery.eq("bank_account_id", filters.bank_account_id);
-      }
-
-      // Fetch fund transfers
-      let transfersQuery = supabase
-        .from("fund_transfers")
-        .select("*, from_account:bank_accounts!fund_transfers_from_account_id_fkey(id, account_name), to_account:bank_accounts!fund_transfers_to_account_id_fkey(id, account_name)");
-
-      if (filters.start_date) {
-        transfersQuery = transfersQuery.gte("date", filters.start_date);
-      }
-      if (filters.end_date) {
-        transfersQuery = transfersQuery.lte("date", filters.end_date);
-      }
-      if (filters.bank_account_id && filters.bank_account_id !== "all") {
-        transfersQuery = transfersQuery.or(`from_account_id.eq.${filters.bank_account_id},to_account_id.eq.${filters.bank_account_id}`);
-      }
-
-      const [expensesResult, creditsResult, transfersResult] = await Promise.all([
-        expensesQuery.order("date", { ascending: false }),
-        creditsQuery.order("date", { ascending: false }),
-        transfersQuery.order("date", { ascending: false }),
-      ]);
-
-      if (expensesResult.error) throw expensesResult.error;
-      if (creditsResult.error) throw creditsResult.error;
-      if (transfersResult.error) throw transfersResult.error;
+      const response = await api.get(`/reports/summary?${params.toString()}`);
+      const { expenses, credits, transfers } = response.data;
 
       // Combine expenses, credits and fund transfers with type indicator
       // For transfers, determine direction based on filtered bank account
-      const transfersWithDirection = (transfersResult.data || []).map((item: any) => {
+      const transfersWithDirection = (transfers || []).map((item: any) => {
         let transfer_direction: 'in' | 'out' | 'neutral' = 'neutral';
-        
+
         if (filters.bank_account_id && filters.bank_account_id !== "all") {
           if (item.to_account_id === filters.bank_account_id) {
             transfer_direction = 'in'; // Money coming into filtered account (credit)
@@ -137,18 +83,18 @@ const Reports = () => {
             transfer_direction = 'out'; // Money going out of filtered account (debit)
           }
         }
-        
-        return { 
-          ...item, 
+
+        return {
+          ...item,
           type: "transfer",
           transfer_direction,
-          bank_accounts: { account_name: `${item.from_account?.account_name} → ${item.to_account?.account_name}` }
+          bank_accounts: { account_name: `${item.fromAccount?.account_name || 'Unknown'} → ${item.toAccount?.account_name || 'Unknown'}` }
         };
       });
 
       const combinedData = [
-        ...(expensesResult.data || []).map((item: any) => ({ ...item, type: "expense" })),
-        ...(creditsResult.data || []).map((item: any) => ({ ...item, type: "credit" })),
+        ...(expenses || []).map((item: any) => ({ ...item, type: "expense", sites: item.site, vendors: item.vendor, categories: item.category, bank_accounts: item.bankAccount })),
+        ...(credits || []).map((item: any) => ({ ...item, type: "credit", bank_accounts: item.bankAccount })),
         ...transfersWithDirection,
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -157,7 +103,7 @@ const Reports = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.response?.data?.error || "Failed to generate report",
       });
     } finally {
       setLoading(false);
@@ -204,17 +150,17 @@ const Reports = () => {
 
     // Add data rows
     reportData.forEach((row) => {
-      let amount = row.amount;
+      let amount = Number(row.amount);
       if (row.type === "expense") {
-        amount = -row.amount;
+        amount = -Number(row.amount);
       } else if (row.type === "transfer") {
-        amount = row.transfer_direction === "out" ? -row.amount : row.amount;
+        amount = row.transfer_direction === "out" ? -Number(row.amount) : Number(row.amount);
       }
 
       const dataRow = worksheet.addRow({
-        date: row.date,
-        type: row.type === "transfer" 
-          ? (row.transfer_direction === "in" ? "Transfer In" : row.transfer_direction === "out" ? "Transfer Out" : "Transfer") 
+        date: new Date(row.date).toLocaleDateString(),
+        type: row.type === "transfer"
+          ? (row.transfer_direction === "in" ? "Transfer In" : row.transfer_direction === "out" ? "Transfer Out" : "Transfer")
           : row.type.charAt(0).toUpperCase() + row.type.slice(1),
         site: row.type === "expense" ? row.sites?.site_name || "-" : row.type === "transfer" ? "Fund Transfer" : row.category || "-",
         vendor: row.type === "expense" ? row.vendors?.name || "-" : "-",
@@ -314,7 +260,7 @@ const Reports = () => {
   const totalExpenses = reportData
     .filter((row) => row.type === "expense")
     .reduce((sum, row) => sum + Number(row.amount), 0);
-  
+
   const totalCredits = reportData
     .filter((row) => row.type === "credit")
     .reduce((sum, row) => sum + Number(row.amount), 0);
@@ -331,7 +277,7 @@ const Reports = () => {
   const totalTransfers = reportData
     .filter((row) => row.type === "transfer")
     .reduce((sum, row) => sum + Number(row.amount), 0);
-  
+
   // Net amount includes: Credits + TransfersIn - Expenses - TransfersOut
   const netAmount = (totalCredits + transfersIn) - (totalExpenses + transfersOut);
 
@@ -362,18 +308,18 @@ const Reports = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="start_date">Start Date</Label>
-                <Input 
-                  type="date" 
-                  name="start_date" 
+                <Input
+                  type="date"
+                  name="start_date"
                   value={filters.start_date}
                   onChange={(e) => setFilters({ ...filters, start_date: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="end_date">End Date</Label>
-                <Input 
-                  type="date" 
-                  name="end_date" 
+                <Input
+                  type="date"
+                  name="end_date"
                   value={filters.end_date}
                   onChange={(e) => setFilters({ ...filters, end_date: e.target.value })}
                 />
@@ -553,64 +499,62 @@ const Reports = () => {
                     <TableHead className="text-xs sm:text-sm">Status</TableHead>
                   </TableRow>
                 </TableHeader>
-              <TableBody>
-                {paginatedData.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">{new Date(row.date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={
-                          row.type === "credit" ? "default" : 
-                          row.type === "transfer" ? (row.transfer_direction === "in" ? "default" : row.transfer_direction === "out" ? "destructive" : "secondary") : 
-                          "destructive"
-                        } 
-                        className="capitalize text-xs"
-                      >
-                        {row.type === "transfer" && row.transfer_direction !== "neutral" 
-                          ? `transfer-${row.transfer_direction}` 
-                          : row.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs sm:text-sm">
-                      {row.type === "expense" ? row.sites?.site_name || "-" : row.type === "transfer" ? "Fund Transfer" : row.sites?.site_name || row.category || "-"}
-                    </TableCell>
-                    <TableCell className="text-xs sm:text-sm">{row.type === "expense" ? row.vendors?.name || "-" : "-"}</TableCell>
-                    <TableCell className="text-xs sm:text-sm">{row.type === "expense" ? row.categories?.category_name || "-" : "-"}</TableCell>
-                    <TableCell className="text-xs sm:text-sm">{row.bank_accounts?.account_name || "-"}</TableCell>
-                    <TableCell className="max-w-xs truncate text-xs sm:text-sm">{row.description || "-"}</TableCell>
-                    <TableCell className={`text-xs sm:text-sm whitespace-nowrap font-semibold ${
-                      row.type === "credit" ? "text-green-600" : 
-                      row.type === "transfer" ? (row.transfer_direction === "in" ? "text-green-600" : row.transfer_direction === "out" ? "text-destructive" : "text-blue-600") : 
-                      "text-destructive"
-                    }`}>
-                      {row.type === "credit" ? "+" : 
-                       row.type === "transfer" ? (row.transfer_direction === "in" ? "+" : row.transfer_direction === "out" ? "-" : "↔") : 
-                       "-"}₹{Number(row.amount).toLocaleString('en-IN')}
-                    </TableCell>
-                    <TableCell>
-                      {row.payment_status && (
+                <TableBody>
+                  {paginatedData.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="text-xs sm:text-sm whitespace-nowrap">{new Date(row.date).toLocaleDateString()}</TableCell>
+                      <TableCell>
                         <Badge
                           variant={
-                            row.payment_status === "paid"
-                              ? "default"
-                              : row.payment_status === "unpaid"
-                              ? "destructive"
-                              : "secondary"
+                            row.type === "credit" ? "default" :
+                              row.type === "transfer" ? (row.transfer_direction === "in" ? "default" : row.transfer_direction === "out" ? "destructive" : "secondary") :
+                                "destructive"
                           }
                           className="capitalize text-xs"
                         >
-                          {row.payment_status}
+                          {row.type === "transfer" && row.transfer_direction !== "neutral"
+                            ? `transfer-${row.transfer_direction}`
+                            : row.type}
                         </Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      </TableCell>
+                      <TableCell className="text-xs sm:text-sm">
+                        {row.type === "expense" ? row.sites?.site_name || "-" : row.type === "transfer" ? "Fund Transfer" : row.sites?.site_name || row.category || "-"}
+                      </TableCell>
+                      <TableCell className="text-xs sm:text-sm">{row.type === "expense" ? row.vendors?.name || "-" : "-"}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">{row.type === "expense" ? row.categories?.category_name || "-" : "-"}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">{row.bank_accounts?.account_name || "-"}</TableCell>
+                      <TableCell className="max-w-xs truncate text-xs sm:text-sm">{row.description || "-"}</TableCell>
+                      <TableCell className={`text-xs sm:text-sm whitespace-nowrap font-semibold ${row.type === "credit" ? "text-green-600" :
+                          row.type === "transfer" ? (row.transfer_direction === "in" ? "text-green-600" : row.transfer_direction === "out" ? "text-destructive" : "text-blue-600") :
+                            "text-destructive"
+                        }`}>
+                        {row.type === "credit" ? "+" :
+                          row.type === "transfer" ? (row.transfer_direction === "in" ? "+" : row.transfer_direction === "out" ? "-" : "↔") :
+                            "-"}₹{Number(row.amount).toLocaleString('en-IN')}
+                      </TableCell>
+                      <TableCell>
+                        {row.payment_status && (
+                          <Badge
+                            variant={
+                              row.payment_status === "paid"
+                                ? "default"
+                                : row.payment_status === "unpaid"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                            className="capitalize text-xs"
+                          >
+                            {row.payment_status}
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-          </CardContent>
-          <CardContent className="pt-0">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            {/* Pagination Controls moved/kept as is... */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
               <div className="text-sm text-muted-foreground">
                 Showing {startIndex + 1} to {Math.min(endIndex, reportData.length)} of {reportData.length} entries
               </div>
@@ -625,7 +569,6 @@ const Reports = () => {
                     </PaginationItem>
                     {[...Array(totalPages)].map((_, index) => {
                       const pageNumber = index + 1;
-                      // Show first page, last page, current page, and pages around current
                       if (
                         pageNumber === 1 ||
                         pageNumber === totalPages ||

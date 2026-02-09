@@ -1,10 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, NavLink } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { LayoutDashboard, Receipt, Building2, Users, FileText, LogOut, HardHat, Landmark, TrendingUp, UserCog, ArrowRightLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 interface DashboardLayoutProps {
@@ -23,21 +20,21 @@ const navigationItems = [
   { title: "Reports", url: "/reports", icon: FileText },
 ];
 
-const DashboardSidebar = ({ user }: { user: User | null }) => {
+const DashboardSidebar = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { state } = useSidebar();
 
-  const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
+  const handleSignOut = () => {
+    try {
+      localStorage.removeItem("token");
+      navigate("/auth");
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: "Failed to sign out",
       });
-    } else {
-      navigate("/auth");
     }
   };
 
@@ -95,30 +92,15 @@ const DashboardSidebar = ({ user }: { user: User | null }) => {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (!session) {
-        navigate("/auth");
-      }
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (!session) {
-        navigate("/auth");
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    // Check for token in localStorage
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/auth");
+    }
+    setLoading(false);
   }, [navigate]);
 
   if (loading) {
@@ -132,7 +114,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
-        <DashboardSidebar user={user} />
+        <DashboardSidebar />
         <main className="flex-1 min-w-0">
           <header className="sticky top-0 z-10 flex h-14 sm:h-16 items-center gap-2 sm:gap-4 border-b bg-card px-3 sm:px-6">
             <SidebarTrigger />

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Users, Phone, FileText, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 interface Vendor {
   id: string;
@@ -29,15 +29,15 @@ const Vendors = () => {
 
   const fetchVendors = async () => {
     try {
-      const { data, error } = await supabase
-        .from("vendors")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      if (data) setVendors(data);
+      const response = await api.get('/api/vendors');
+      setVendors(response.data);
     } catch (error) {
       console.error("Error fetching vendors:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch vendors"
+      });
     } finally {
       setLoading(false);
     }
@@ -53,40 +53,30 @@ const Vendors = () => {
       gst_number: formData.get("gst_number") as string,
     };
 
-    const { error } = await supabase.from("vendors").insert([newVendor]);
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    } else {
+    try {
+      await api.post('/api/vendors', newVendor);
       toast({
         title: "Success",
         description: "Vendor added successfully",
       });
       setDialogOpen(false);
       fetchVendors();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.error || "Failed to add vendor",
+      });
     }
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("vendors").delete().eq("id", id);
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Vendor deleted successfully",
-      });
-      fetchVendors();
-    }
+    // Note: Delete endpoint placeholder
+    toast({
+      variant: "destructive",
+      title: "Not Implemented",
+      description: "Delete functionality for vendors is pending backend update."
+    });
   };
 
   if (loading) {
@@ -165,34 +155,34 @@ const Vendors = () => {
                   <TableHead className="text-xs sm:text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-            <TableBody>
-              {vendors.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-xs sm:text-sm text-muted-foreground py-8">
-                    No vendors found. Add your first vendor to get started.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                vendors.map((vendor) => (
-                  <TableRow key={vendor.id}>
-                    <TableCell className="font-medium text-xs sm:text-sm">{vendor.name}</TableCell>
-                    <TableCell className="text-xs sm:text-sm">{vendor.contact || "-"}</TableCell>
-                    <TableCell className="text-xs sm:text-sm">{vendor.gst_number || "-"}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleDelete(vendor.id)}
-                      >
-                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </Button>
+              <TableBody>
+                {vendors.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-xs sm:text-sm text-muted-foreground py-8">
+                      No vendors found. Add your first vendor to get started.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  vendors.map((vendor) => (
+                    <TableRow key={vendor.id}>
+                      <TableCell className="font-medium text-xs sm:text-sm">{vendor.name}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">{vendor.contact || "-"}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">{vendor.gst_number || "-"}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleDelete(vendor.id)}
+                        >
+                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>

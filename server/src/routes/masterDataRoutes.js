@@ -1,0 +1,20 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const masterDataController_1 = require("../controllers/masterDataController");
+const authMiddleware_1 = require("../middleware/authMiddleware");
+const router = express_1.default.Router();
+router.use(authMiddleware_1.authenticateToken);
+router.get('/sites', masterDataController_1.getSites);
+router.post('/sites', masterDataController_1.createSite);
+router.get('/vendors', masterDataController_1.getVendors);
+router.post('/vendors', masterDataController_1.createVendor);
+router.get('/categories', masterDataController_1.getCategories);
+router.post('/categories', masterDataController_1.createCategory);
+router.get('/bank-accounts', masterDataController_1.getBankAccounts);
+router.post('/bank-accounts', masterDataController_1.createBankAccount);
+router.delete('/bank-accounts/:id', masterDataController_1.deleteBankAccount);
+exports.default = router;

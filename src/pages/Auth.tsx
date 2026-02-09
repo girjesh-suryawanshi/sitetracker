@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,30 +13,42 @@ const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [isRegister, setIsRegister] = useState(false); // Toggle between Login and Register
 
-  const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAuth = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
+    const name = formData.get("name") as string;
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const endpoint = isRegister ? '/auth/register' : '/auth/login';
+      const payload = isRegister ? { email, password, name } : { email, password };
 
-    setLoading(false);
+      const response = await api.post(endpoint, payload);
 
-    if (error) {
+      const { token, user } = response.data;
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+
+      toast({
+        title: "Success",
+        description: isRegister ? "Account created successfully" : "Signed in successfully",
+      });
+
+      navigate("/dashboard");
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.response?.data?.error || "Authentication failed",
       });
-    } else {
-      navigate("/dashboard");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -53,11 +65,23 @@ const Auth = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>Sign in to access the dashboard</CardDescription>
+            <CardTitle>{isRegister ? "Create Account" : "Sign In"}</CardTitle>
+            <CardDescription>{isRegister ? "Create a new account to get started" : "Sign in to access the dashboard"}</CardDescription>
           </CardHeader>
-          <form onSubmit={handleSignIn}>
+          <form onSubmit={handleAuth}>
             <CardContent className="space-y-4">
+              {isRegister && (
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Name</Label>
+                  <Input
+                    id="signup-name"
+                    name="name"
+                    type="text"
+                    placeholder="Your Name"
+                    required
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="signin-email">Email</Label>
                 <Input
@@ -78,9 +102,17 @@ const Auth = () => {
                 />
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-col gap-2">
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Signing in..." : "Sign In"}
+                {loading ? "Processing..." : (isRegister ? "Sign Up" : "Sign In")}
+              </Button>
+              <Button
+                type="button"
+                variant="link"
+                className="w-full"
+                onClick={() => setIsRegister(!isRegister)}
+              >
+                {isRegister ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
               </Button>
             </CardFooter>
           </form>

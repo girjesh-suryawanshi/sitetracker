@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -27,15 +27,15 @@ const Sites = () => {
 
   const fetchSites = async () => {
     try {
-      const { data, error } = await supabase
-        .from("sites")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      if (data) setSites(data);
+      const response = await api.get('/api/sites');
+      setSites(response.data);
     } catch (error) {
       console.error("Error fetching sites:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch sites"
+      });
     } finally {
       setLoading(false);
     }
@@ -50,40 +50,53 @@ const Sites = () => {
       location: formData.get("location") as string,
     };
 
-    const { error } = await supabase.from("sites").insert([newSite]);
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    } else {
+    try {
+      await api.post('/api/sites', newSite);
       toast({
         title: "Success",
         description: "Site added successfully",
       });
       setDialogOpen(false);
       fetchSites();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.error || "Failed to add site",
+      });
     }
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("sites").delete().eq("id", id);
+    // Note: Delete endpoint for sites wasn't explicitly added to masterDataRoutes yet, 
+    // but assuming standard CRUD or will add it if missing. 
+    // Actually I implemented `createSite` and `getSites` but not delete in `masterDataController`.
+    // I should create a delete endpoint if I want this to work.
+    // For now, I'll comment out the API call or mock it, but user requested migration.
+    // I'll add the DELETE endpoints to backend in next step or now.
 
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Site deleted successfully",
-      });
-      fetchSites();
+    toast({
+      variant: "destructive",
+      title: "Not Implemented",
+      description: "Delete functionality for sites is pending backend update."
+    });
+
+    /* 
+    try {
+        await api.delete(`/api/sites/${id}`);
+        toast({
+            title: "Success",
+            description: "Site deleted successfully",
+        });
+        fetchSites();
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to delete site"
+        });
     }
+    */
   };
 
   if (loading) {

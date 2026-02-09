@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  site_manager
+  viewer
+}
+
+enum PaymentStatus {
+  paid
+  unpaid
+  partial
+}
+
+enum PaymentMethod {
+  cash
+  bank_transfer
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String   // Added for local auth
+  role      UserRole @default(viewer)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  managedSites Site[]    @relation("SiteManager")
+  expenses     Expense[] @relation("ExpenseCreator")
+  credits      Credit[]  @relation("CreditCreator")
+  createdTransfers FundTransfer[] @relation("TransferCreator")
+
+  @@map("profiles")
+}
+
+model Site {
+  id        String   @id @default(uuid())
+  site_name String
+  location  String
+  manager_id String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  manager  Profile?  @relation("SiteManager", fields: [manager_id], references: [id])
+  expenses Expense[]
+
+  @@map("sites")
+}
+
+model Vendor {
+  id        String   @id @default(uuid())
+  name      String
+  contact   String?
+  gst_number String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  expenses Expense[]
+
+  @@map("vendors")
+}
+
+model Category {
+  id            String   @id @default(uuid())
+  category_name String   @unique
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  expenses Expense[]
+
+  @@map("categories")
+}
+
+model BankAccount {
+  id             String   @id @default(uuid())
+  account_name   String
+  account_number String
+  bank_name      String
+  ifsc_code      String?
+  balance        Decimal  @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  expenses      Expense[]
+  credits       Credit[]
+  transfersFrom FundTransfer[] @relation("TransferFrom")
+  transfersTo   FundTransfer[] @relation("TransferTo")
+
+  @@map("bank_accounts")
+}
+
+model Expense {
+  id             String        @id @default(uuid())
+  site_id        String
+  vendor_id      String
+  category_id    String
+  date           DateTime      @db.Date
+  description    String?
+  amount         Decimal       @db.Decimal(12, 2)
+  payment_status PaymentStatus @default(unpaid)
+  payment_method PaymentMethod @default(cash)
+  attachment_url String?
+  created_by     String
+  bank_account_id String?
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  site        Site         @relation(fields: [site_id], references: [id], onDelete: Cascade)
+  vendor      Vendor       @relation(fields: [vendor_id], references: [id])
+  category    Category     @relation(fields: [category_id], references: [id])
+  creator     Profile      @relation("ExpenseCreator", fields: [created_by], references: [id])
+  bankAccount BankAccount? @relation(fields: [bank_account_id], references: [id])
+
+  @@unique([site_id, vendor_id, date, amount])
+  @@map("expenses")
+}
+
+model Credit {
+  id              String        @id @default(uuid())
+  date            DateTime      @db.Date
+  amount          Decimal       @db.Decimal(12, 2)
+  payment_method  PaymentMethod @default(cash)
+  description     String?
+  category        String        // Text field in original migration
+  created_by      String
+  bank_account_id String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  creator     Profile      @relation("CreditCreator", fields: [created_by], references: [id])
+  bankAccount BankAccount? @relation(fields: [bank_account_id], references: [id])
+
+  @@map("credits")
+}
+
+model FundTransfer {
+  id              String   @id @default(uuid())
+  from_account_id String
+  to_account_id   String
+  amount          Decimal  @db.Decimal(12, 2)
+  date            DateTime @db.Date
+  description     String?
+  created_by      String
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  fromAccount BankAccount @relation("TransferFrom", fields: [from_account_id], references: [id], onDelete: Cascade)
+  toAccount   BankAccount @relation("TransferTo", fields: [to_account_id], references: [id], onDelete: Cascade)
+  creator     Profile     @relation("TransferCreator", fields: [created_by], references: [id])
+
+  @@map("fund_transfers")
+}
