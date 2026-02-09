@@ -116,7 +116,7 @@ exports.createBankAccount = createBankAccount;
 const deleteBankAccount = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        yield server_1.prisma.bankAccount.delete({ where: { id } });
+        yield server_1.prisma.bankAccount.delete({ where: { id: String(id) } });
         res.json({ message: 'Bank account deleted' });
     }
     catch (error) {

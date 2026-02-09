@@ -69,10 +69,10 @@ const deleteFundTransfer = (req, res) => __awaiter(void 0, void 0, void 0, funct
         const { id } = req.params;
         // Check if admin? Logic in controller or middleware. Use middleware in routes ideally.
         yield server_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
-            const transfer = yield tx.fundTransfer.findUnique({ where: { id } });
+            const transfer = yield tx.fundTransfer.findUnique({ where: { id: String(id) } });
             if (!transfer)
                 throw new Error('Transfer not found');
-            yield tx.fundTransfer.delete({ where: { id } });
+            yield tx.fundTransfer.delete({ where: { id: String(id) } });
             // Revert balances
             yield tx.bankAccount.update({
                 where: { id: transfer.from_account_id },

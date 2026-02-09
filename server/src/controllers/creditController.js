@@ -67,7 +67,7 @@ const updateCredit = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         // Simplified update without complex balance revert logic for now
         // In a real app, we'd revert previous balance effect and apply new one
         const credit = yield server_1.prisma.credit.update({
-            where: { id },
+            where: { id: String(id) },
             data: {
                 date: new Date(date),
                 amount: Number(amount),
@@ -88,7 +88,7 @@ exports.updateCredit = updateCredit;
 const deleteCredit = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        yield server_1.prisma.credit.delete({ where: { id } });
+        yield server_1.prisma.credit.delete({ where: { id: String(id) } });
         res.json({ message: 'Credit deleted' });
     }
     catch (error) {

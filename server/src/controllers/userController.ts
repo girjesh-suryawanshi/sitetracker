@@ -11,13 +11,13 @@ interface AuthRequest extends Request {
 export const getUsers = async (req: AuthRequest, res: Response) => {
     try {
         const users = await prisma.profile.findMany({
-            orderBy: { created_at: 'desc' },
+            orderBy: { createdAt: 'desc' },
             select: {
                 id: true,
                 email: true,
                 name: true,
                 role: true,
-                created_at: true,
+                createdAt: true,
                 // Exclude password
             }
         });
@@ -36,7 +36,7 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'Cannot delete yourself' });
         }
 
-        await prisma.profile.delete({ where: { id } });
+        await prisma.profile.delete({ where: { id: String(id) } });
         res.json({ message: 'User deleted' });
     } catch (error) {
         res.status(500).json({ error: 'Server error' });

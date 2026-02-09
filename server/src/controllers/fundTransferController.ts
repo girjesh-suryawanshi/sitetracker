@@ -71,10 +71,10 @@ export const deleteFundTransfer = async (req: AuthRequest, res: Response) => {
         // Check if admin? Logic in controller or middleware. Use middleware in routes ideally.
 
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-            const transfer = await tx.fundTransfer.findUnique({ where: { id } });
+            const transfer = await tx.fundTransfer.findUnique({ where: { id: String(id) } });
             if (!transfer) throw new Error('Transfer not found');
 
-            await tx.fundTransfer.delete({ where: { id } });
+            await tx.fundTransfer.delete({ where: { id: String(id) } });
 
             // Revert balances
             await tx.bankAccount.update({

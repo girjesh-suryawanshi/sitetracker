@@ -14,13 +14,13 @@ const server_1 = require("../server");
 const getUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const users = yield server_1.prisma.profile.findMany({
-            orderBy: { created_at: 'desc' },
+            orderBy: { createdAt: 'desc' },
             select: {
                 id: true,
                 email: true,
                 name: true,
                 role: true,
-                created_at: true,
+                createdAt: true,
                 // Exclude password
             }
         });
@@ -39,7 +39,7 @@ const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) === id) {
             return res.status(400).json({ error: 'Cannot delete yourself' });
         }
-        yield server_1.prisma.profile.delete({ where: { id } });
+        yield server_1.prisma.profile.delete({ where: { id: String(id) } });
         res.json({ message: 'User deleted' });
     }
     catch (error) {

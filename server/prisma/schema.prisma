@@ -53,6 +53,7 @@ model Site {
   // Relations
   manager  Profile?  @relation("SiteManager", fields: [manager_id], references: [id])
   expenses Expense[]
+  credits  Credit[]
 
   @@map("sites")
 }
@@ -137,12 +138,14 @@ model Credit {
   category        String        // Text field in original migration
   created_by      String
   bank_account_id String?
+  site_id         String?
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @default(now()) @updatedAt @map("updated_at")
 
   // Relations
   creator     Profile      @relation("CreditCreator", fields: [created_by], references: [id])
   bankAccount BankAccount? @relation(fields: [bank_account_id], references: [id])
+  site        Site?        @relation(fields: [site_id], references: [id])
 
   @@map("credits")
 }

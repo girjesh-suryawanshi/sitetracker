@@ -1,25 +1,12 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import api from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Building2, Wallet, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SiteDetailsModal } from "@/components/dashboard/SiteDetailsModal";
 
-interface SiteSummary {
-  site_name: string;
-  received: number;
-  expense: number;
-  balance: number;
-}
-
-interface AccountSummary {
-  account_name: string;
-  expense: number;
-  credit: number;
-  transferIn: number;
-  transferOut: number;
-}
+// ... (interfaces remain same)
 
 const Dashboard = () => {
   const [siteSummary, setSiteSummary] = useState<SiteSummary[]>([]);
@@ -33,37 +20,26 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch site-wise summary
-      const { data: allSites } = await supabase
-        .from("sites")
-        .select("id, site_name");
+      const [sitesRes, bankAccountsRes, reportRes] = await Promise.all([
+        api.get('/api/sites'),
+        api.get('/api/bank-accounts'),
+        api.get('/reports/summary')
+      ]);
 
-      const { data: allExpenses } = await supabase
-        .from("expenses")
-        .select("site_id, amount, payment_method, bank_account_id");
-
-      const { data: allCredits } = await supabase
-        .from("credits")
-        .select("site_id, amount, payment_method, bank_account_id");
-
-      const { data: bankAccounts } = await supabase
-        .from("bank_accounts")
-        .select("id, account_name");
-
-      const { data: fundTransfers } = await supabase
-        .from("fund_transfers")
-        .select("from_account_id, to_account_id, amount");
+      const allSites = sitesRes.data;
+      const bankAccounts = bankAccountsRes.data;
+      const { expenses: allExpenses, credits: allCredits, transfers: fundTransfers } = reportRes.data;
 
       // Process site-wise summary
       const siteSummaryData: SiteSummary[] = [];
-      allSites?.forEach((site) => {
+      allSites?.forEach((site: any) => {
         const siteExpenses = allExpenses
-          ?.filter((exp) => exp.site_id === site.id)
-          .reduce((sum, exp) => sum + Number(exp.amount), 0) || 0;
-        
+          ?.filter((exp: any) => exp.site_id === site.id)
+          .reduce((sum: number, exp: any) => sum + Number(exp.amount), 0) || 0;
+
         const siteCredits = allCredits
-          ?.filter((credit) => credit.site_id === site.id)
-          .reduce((sum, credit) => sum + Number(credit.amount), 0) || 0;
+          ?.filter((credit: any) => credit.site_id === site.id)
+          .reduce((sum: number, credit: any) => sum + Number(credit.amount), 0) || 0;
 
         siteSummaryData.push({
           site_name: site.site_name,
@@ -76,14 +52,14 @@ const Dashboard = () => {
       // Process account-wise summary
       const accountSummaryData: AccountSummary[] = [];
 
-      // Cash summary (no fund transfers for cash)
+      // Cash summary
       const cashExpenses = allExpenses
-        ?.filter((exp) => exp.payment_method === 'cash')
-        .reduce((sum, exp) => sum + Number(exp.amount), 0) || 0;
-      
+        ?.filter((exp: any) => exp.payment_method === 'cash')
+        .reduce((sum: number, exp: any) => sum + Number(exp.amount), 0) || 0;
+
       const cashCredits = allCredits
-        ?.filter((credit) => credit.payment_method === 'cash')
-        .reduce((sum, credit) => sum + Number(credit.amount), 0) || 0;
+        ?.filter((credit: any) => credit.payment_method === 'cash')
+        .reduce((sum: number, credit: any) => sum + Number(credit.amount), 0) || 0;
 
       accountSummaryData.push({
         account_name: 'Cash',
@@ -94,23 +70,23 @@ const Dashboard = () => {
       });
 
       // Bank account summaries
-      bankAccounts?.forEach((account) => {
+      bankAccounts?.forEach((account: any) => {
         const bankExpenses = allExpenses
-          ?.filter((exp) => exp.payment_method === 'bank_transfer' && exp.bank_account_id === account.id)
-          .reduce((sum, exp) => sum + Number(exp.amount), 0) || 0;
-        
+          ?.filter((exp: any) => exp.payment_method === 'bank_transfer' && exp.bank_account_id === account.id)
+          .reduce((sum: number, exp: any) => sum + Number(exp.amount), 0) || 0;
+
         const bankCredits = allCredits
-          ?.filter((credit) => credit.payment_method === 'bank_transfer' && credit.bank_account_id === account.id)
-          .reduce((sum, credit) => sum + Number(credit.amount), 0) || 0;
+          ?.filter((credit: any) => credit.payment_method === 'bank_transfer' && credit.bank_account_id === account.id)
+          .reduce((sum: number, credit: any) => sum + Number(credit.amount), 0) || 0;
 
         // Calculate fund transfers for this account
         const transferIn = fundTransfers
-          ?.filter((t) => t.to_account_id === account.id)
-          .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+          ?.filter((t: any) => t.to_account_id === account.id)
+          .reduce((sum: number, t: any) => sum + Number(t.amount), 0) || 0;
 
         const transferOut = fundTransfers
-          ?.filter((t) => t.from_account_id === account.id)
-          .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+          ?.filter((t: any) => t.from_account_id === account.id)
+          .reduce((sum: number, t: any) => sum + Number(t.amount), 0) || 0;
 
         accountSummaryData.push({
           account_name: account.account_name,
@@ -140,7 +116,7 @@ const Dashboard = () => {
 
   // Calculate totals for overview
   const totalSiteBalance = siteSummary.reduce((sum, site) => sum + site.balance, 0);
-  const totalAccountBalance = accountSummary.reduce((sum, acc) => 
+  const totalAccountBalance = accountSummary.reduce((sum, acc) =>
     sum + (acc.credit + acc.transferIn - acc.expense - acc.transferOut), 0
   );
   const totalRevenue = siteSummary.reduce((sum, site) => sum + site.received, 0);
@@ -313,7 +289,7 @@ const Dashboard = () => {
                     {accountSummary.map((account, index) => {
                       const balance = account.credit + account.transferIn - account.expense - account.transferOut;
                       const isCash = account.account_name === 'Cash';
-                      
+
                       return (
                         <TableRow key={index} className="hover:bg-muted/30">
                           <TableCell className="text-xs sm:text-sm font-medium py-4">

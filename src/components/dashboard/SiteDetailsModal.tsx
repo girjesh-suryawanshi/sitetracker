@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import api from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -52,11 +52,8 @@ export const SiteDetailsModal = ({ open, onOpenChange, siteName }: SiteDetailsMo
     setLoading(true);
     try {
       // Get site ID first
-      const { data: site } = await supabase
-        .from("sites")
-        .select("id")
-        .eq("site_name", siteName)
-        .maybeSingle();
+      const { data: sites } = await api.get("/api/sites");
+      const site = sites.find((s: any) => s.site_name === siteName);
 
       if (!site) {
         setExpenses([]);
@@ -65,30 +62,17 @@ export const SiteDetailsModal = ({ open, onOpenChange, siteName }: SiteDetailsMo
       }
 
       // Fetch expenses for this site
-      const { data: expensesData } = await supabase
-        .from("expenses")
-        .select(`
-          id,
-          date,
-          amount,
-          description,
-          payment_status,
-          payment_method,
-          vendor:vendors(name),
-          category:categories(category_name)
-        `)
-        .eq("site_id", site.id)
-        .order("date", { ascending: false });
+      const { data: expensesData } = await api.get("/api/expenses", {
+        params: { site_id: site.id }
+      });
 
       // Fetch credits for this site
-      const { data: creditsData } = await supabase
-        .from("credits")
-        .select("id, date, amount, description, category, payment_method")
-        .eq("site_id", site.id)
-        .order("date", { ascending: false });
+      // Note: Backend doesn't support filtering by site_id yet, so we filter client-side
+      const { data: creditsData } = await api.get("/api/credits");
+      const siteCredits = creditsData.filter((c: any) => c.site_id === site.id);
 
       setExpenses(expensesData || []);
-      setCredits(creditsData || []);
+      setCredits(siteCredits || []);
     } catch (error) {
       console.error("Error fetching site details:", error);
     } finally {
@@ -180,7 +164,7 @@ export const SiteDetailsModal = ({ open, onOpenChange, siteName }: SiteDetailsMo
                             <Badge
                               variant={
                                 expense.payment_status === 'paid' ? 'default' :
-                                expense.payment_status === 'partial' ? 'secondary' : 'destructive'
+                                  expense.payment_status === 'partial' ? 'secondary' : 'destructive'
                               }
                               className="text-xs"
                             >

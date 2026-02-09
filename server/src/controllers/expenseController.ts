@@ -101,7 +101,7 @@ export const updateExpense = async (req: AuthRequest, res: Response) => {
         // Given the complexity of the SQL trigger (partial payments etc), I will implement the most common case: Paid/Unpaid.
 
         const expense = await prisma.expense.update({
-            where: { id },
+            where: { id: String(id) },
             data: {
                 site_id,
                 vendor_id,
@@ -131,7 +131,7 @@ export const deleteExpense = async (req: AuthRequest, res: Response) => {
             return res.status(403).json({ error: 'Admins only' });
         }
 
-        await prisma.expense.delete({ where: { id } });
+        await prisma.expense.delete({ where: { id: String(id) } });
         res.json({ message: 'Expense deleted' });
     } catch (error) {
         console.error(error);

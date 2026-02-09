@@ -67,7 +67,7 @@ export const updateCredit = async (req: AuthRequest, res: Response) => {
         // Simplified update without complex balance revert logic for now
         // In a real app, we'd revert previous balance effect and apply new one
         const credit = await prisma.credit.update({
-            where: { id },
+            where: { id: String(id) },
             data: {
                 date: new Date(date),
                 amount: Number(amount),
@@ -88,7 +88,7 @@ export const updateCredit = async (req: AuthRequest, res: Response) => {
 export const deleteCredit = async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
-        await prisma.credit.delete({ where: { id } });
+        await prisma.credit.delete({ where: { id: String(id) } });
         res.json({ message: 'Credit deleted' });
     } catch (error) {
         res.status(500).json({ error: 'Server error' });

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -9,15 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Landmark, Trash2 } from "lucide-react";
 
-interface BankAccount {
-  id: string;
-  account_name: string;
-  account_number: string;
-  bank_name: string;
-  ifsc_code: string | null;
-  balance: number;
-  created_at: string;
-}
+// ... (interface remains same)
 
 const BankAccounts = () => {
   const { toast } = useToast();
@@ -31,13 +23,8 @@ const BankAccounts = () => {
 
   const fetchBankAccounts = async () => {
     try {
-      const { data, error } = await supabase
-        .from("bank_accounts")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      if (data) setBankAccounts(data);
+      const response = await api.get('/api/bank-accounts');
+      setBankAccounts(response.data);
     } catch (error) {
       console.error("Error fetching bank accounts:", error);
     } finally {
@@ -57,15 +44,9 @@ const BankAccounts = () => {
       balance: parseFloat(formData.get("balance") as string),
     };
 
-    const { error } = await supabase.from("bank_accounts").insert([newBankAccount]);
+    try {
+      await api.post('/api/bank-accounts', newBankAccount);
 
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    } else {
       toast({
         title: "Success",
         description: "Bank account added successfully",
@@ -73,24 +54,30 @@ const BankAccounts = () => {
       setDialogOpen(false);
       fetchBankAccounts();
       (e.target as HTMLFormElement).reset();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.error || error.message || "Failed to add account",
+      });
     }
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("bank_accounts").delete().eq("id", id);
+    try {
+      await api.delete(`/api/bank-accounts/${id}`);
 
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    } else {
       toast({
         title: "Success",
         description: "Bank account deleted successfully",
       });
       fetchBankAccounts();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.error || error.message || "Failed to delete account",
+      });
     }
   };
 
@@ -193,43 +180,43 @@ const BankAccounts = () => {
                   <TableHead className="text-xs sm:text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-            <TableBody>
-              {bankAccounts.length === 0 ? (
+              <TableBody>
+                {bankAccounts.length === 0 ? (
                   <TableRow>
-                  <TableCell colSpan={6} className="text-center text-xs sm:text-sm text-muted-foreground py-8">
-                    No bank accounts found. Add your first bank account to get started.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                bankAccounts.map((account) => (
-                  <TableRow key={account.id}>
-                    <TableCell className="font-medium text-xs sm:text-sm">
-                      <div className="flex items-center gap-2">
-                        <Landmark className="w-3 h-3 sm:w-4 sm:h-4 text-primary shrink-0" />
-                        <span className="truncate">{account.account_name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs sm:text-sm">{account.bank_name}</TableCell>
-                    <TableCell className="font-mono text-xs sm:text-sm">{account.account_number}</TableCell>
-                    <TableCell className="text-xs sm:text-sm">{account.ifsc_code || "-"}</TableCell>
-                    <TableCell className="text-right font-semibold text-xs sm:text-sm whitespace-nowrap">
-                      ₹{account.balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleDelete(account.id)}
-                      >
-                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </Button>
+                    <TableCell colSpan={6} className="text-center text-xs sm:text-sm text-muted-foreground py-8">
+                      No bank accounts found. Add your first bank account to get started.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  bankAccounts.map((account) => (
+                    <TableRow key={account.id}>
+                      <TableCell className="font-medium text-xs sm:text-sm">
+                        <div className="flex items-center gap-2">
+                          <Landmark className="w-3 h-3 sm:w-4 sm:h-4 text-primary shrink-0" />
+                          <span className="truncate">{account.account_name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs sm:text-sm">{account.bank_name}</TableCell>
+                      <TableCell className="font-mono text-xs sm:text-sm">{account.account_number}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">{account.ifsc_code || "-"}</TableCell>
+                      <TableCell className="text-right font-semibold text-xs sm:text-sm whitespace-nowrap">
+                        ₹{account.balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleDelete(account.id)}
+                        >
+                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>

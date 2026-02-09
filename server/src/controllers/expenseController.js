@@ -103,7 +103,7 @@ const updateExpense = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // to strictly match the "migration" scope, but typically I'd reimplement the trigger logic here in TS.
         // Given the complexity of the SQL trigger (partial payments etc), I will implement the most common case: Paid/Unpaid.
         const expense = yield server_1.prisma.expense.update({
-            where: { id },
+            where: { id: String(id) },
             data: {
                 site_id,
                 vendor_id,
@@ -132,7 +132,7 @@ const deleteExpense = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (((_a = req.user) === null || _a === void 0 ? void 0 : _a.role) !== 'admin') {
             return res.status(403).json({ error: 'Admins only' });
         }
-        yield server_1.prisma.expense.delete({ where: { id } });
+        yield server_1.prisma.expense.delete({ where: { id: String(id) } });
         res.json({ message: 'Expense deleted' });
     }
     catch (error) {

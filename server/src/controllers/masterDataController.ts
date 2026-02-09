@@ -98,7 +98,7 @@ export const createBankAccount = async (req: Request, res: Response) => {
 export const deleteBankAccount = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        await prisma.bankAccount.delete({ where: { id } });
+        await prisma.bankAccount.delete({ where: { id: String(id) } });
         res.json({ message: 'Bank account deleted' });
     } catch (error) {
         // Handle FK constraint errors gracefully if needed

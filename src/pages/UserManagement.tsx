@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,13 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Plus } from "lucide-react";
 
-interface Profile {
-  id: string;
-  name: string;
-  email: string | null;
-  role: string;
-  created_at: string;
-}
+// ... (interface remains same)
 
 const UserManagement = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -32,18 +26,13 @@ const UserManagement = () => {
 
   const fetchProfiles = async () => {
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setProfiles(data || []);
+      const response = await api.get('/api/users');
+      setProfiles(response.data);
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.response?.data?.error || error.message || "Failed to fetch users",
       });
     } finally {
       setLoading(false);
@@ -68,17 +57,13 @@ const UserManagement = () => {
     }
 
     try {
-      // Create user using auth signup
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Use local register endpoint
+      await api.post('/auth/register', {
         email,
         password,
-        options: {
-          data: { name, role: selectedRole },
-          emailRedirectTo: `${window.location.origin}/`,
-        },
+        name,
+        role: selectedRole,
       });
-
-      if (authError) throw authError;
 
       toast({
         title: "Success",
@@ -94,7 +79,7 @@ const UserManagement = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to create user",
+        description: error.response?.data?.error || error.message || "Failed to create user",
       });
     }
   };
@@ -105,13 +90,7 @@ const UserManagement = () => {
     }
 
     try {
-      // First delete the profile (this will trigger cascade delete on auth.users)
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", userId);
-
-      if (profileError) throw profileError;
+      await api.delete(`/api/users/${userId}`);
 
       toast({
         title: "Success",
@@ -123,7 +102,7 @@ const UserManagement = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: error.response?.data?.error || error.message || "Failed to delete user",
       });
     }
   };
@@ -190,8 +169,8 @@ const UserManagement = () => {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="role">Role</Label>
-                  <Select 
-                    value={selectedRole} 
+                  <Select
+                    value={selectedRole}
                     onValueChange={setSelectedRole}
                   >
                     <SelectTrigger>
@@ -235,31 +214,31 @@ const UserManagement = () => {
                     <TableHead className="text-right text-xs sm:text-sm">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
-              <TableBody>
-                {profiles.map((profile) => (
-                  <TableRow key={profile.id}>
-                    <TableCell className="text-xs sm:text-sm">{profile.name}</TableCell>
-                    <TableCell className="text-xs sm:text-sm">{profile.email || "-"}</TableCell>
-                    <TableCell className="capitalize text-xs sm:text-sm">
-                      {profile.role.replace("_", " ")}
-                    </TableCell>
-                    <TableCell className="text-xs sm:text-sm whitespace-nowrap">
-                      {new Date(profile.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleDelete(profile.id)}
-                      >
-                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                <TableBody>
+                  {profiles.map((profile) => (
+                    <TableRow key={profile.id}>
+                      <TableCell className="text-xs sm:text-sm">{profile.name}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">{profile.email || "-"}</TableCell>
+                      <TableCell className="capitalize text-xs sm:text-sm">
+                        {profile.role.replace("_", " ")}
+                      </TableCell>
+                      <TableCell className="text-xs sm:text-sm whitespace-nowrap">
+                        {new Date(profile.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleDelete(profile.id)}
+                        >
+                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>
