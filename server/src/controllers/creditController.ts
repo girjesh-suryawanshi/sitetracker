@@ -11,12 +11,31 @@ interface AuthRequest extends Request {
 
 export const getCredits = async (req: AuthRequest, res: Response) => {
     try {
+        const { site_id, bank_account_id, payment_method, category, date_from, date_to } = req.query;
+
+        const where: any = {};
+        if (site_id && site_id !== 'all') where.site_id = String(site_id);
+        if (bank_account_id && bank_account_id !== 'all') where.bank_account_id = String(bank_account_id);
+        if (payment_method && payment_method !== 'all') where.payment_method = String(payment_method);
+        if (category && category !== 'all') where.category = String(category);
+
+        if (date_from || date_to) {
+            where.date = {};
+            if (date_from) where.date.gte = new Date(String(date_from));
+            if (date_to) where.date.lte = new Date(String(date_to));
+        }
+
         const credits = await prisma.credit.findMany({
-            include: { bankAccount: true },
+            where,
+            include: {
+                bankAccount: true,
+                site: true
+            },
             orderBy: { date: 'desc' }
         });
         res.json(credits);
     } catch (error) {
+        console.error("Error fetching credits:", error);
         res.status(500).json({ error: 'Server error' });
     }
 };

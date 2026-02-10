@@ -61,18 +61,22 @@ export const SiteDetailsModal = ({ open, onOpenChange, siteName }: SiteDetailsMo
         return;
       }
 
+      console.log("Fetching details for site:", site);
+
       // Fetch expenses for this site
-      const { data: expensesData } = await api.get("/api/expenses", {
+      const { data: expensesData } = await api.get("/expenses", {
         params: { site_id: site.id }
       });
+      console.log("Expenses fetched:", expensesData);
 
       // Fetch credits for this site
-      // Note: Backend doesn't support filtering by site_id yet, so we filter client-side
-      const { data: creditsData } = await api.get("/api/credits");
-      const siteCredits = creditsData.filter((c: any) => c.site_id === site.id);
+      const { data: creditsData } = await api.get("/credits", {
+        params: { site_id: site.id }
+      });
+      console.log("Credits fetched:", creditsData);
 
       setExpenses(expensesData || []);
-      setCredits(siteCredits || []);
+      setCredits(creditsData || []);
     } catch (error) {
       console.error("Error fetching site details:", error);
     } finally {

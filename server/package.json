@@ -10,8 +10,7 @@
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
-    "prisma:studio": "prisma studio",
-    "migrate": "ts-node src/scripts/migrateFromSupabase.ts"
+    "prisma:studio": "prisma studio"
   },
   "keywords": [],
   "author": "",
