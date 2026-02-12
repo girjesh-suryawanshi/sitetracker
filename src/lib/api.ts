@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+// Use relative path for production (Docker/Nginx handles proxying)
+// In development, Vite proxy or CORS handles it.
 const api = axios.create({
-    baseURL: 'http://localhost:3000',
+    baseURL: import.meta.env.PROD ? '/' : 'http://localhost:3000',
     headers: {
         'Content-Type': 'application/json',
     },

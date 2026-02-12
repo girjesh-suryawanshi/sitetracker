@@ -108,6 +108,23 @@ Once configured:
 -   **Frontend & API:** `http://sitetracker.haimiinfra.com`
 -   **Database:** Port `5435`
 
+### Step 7: Enable HTTPS (SSL)
+To make `https://sitetracker.haimiinfra.com` work, you need to install an SSL certificate on your **Main VPS Nginx**.
+
+1.  **Install Certbot** (if not already installed):
+    ```bash
+    sudo apt install certbot python3-certbot-nginx
+    ```
+2.  **Run Certbot:**
+    ```bash
+    sudo certbot --nginx -d sitetracker.haimiinfra.com
+    ```
+3.  **Reload Nginx:**
+    ```bash
+    sudo systemctl reload nginx
+    ```
+
+
 ## Troubleshooting
 
 -   **Logs:**
@@ -115,6 +132,23 @@ Once configured:
     docker-compose logs -f backend
     docker-compose logs -f frontend
     ```
+-   **Database Issues (Login/Signup Failing?)**
+    1.  **Check if DB is running:**
+        ```bash
+        docker-compose ps
+        ```
+    2.  **Check Backend Logs for Errors:**
+        ```bash
+        docker-compose logs backend
+        ```
+    3.  **Re-Run Migration (Fix Missing Tables):**
+        ```bash
+        docker exec -it site-expense-backend npx prisma db push
+        ```
+    4.  **Check Data (Optional - Advanced):**
+        ```bash
+        docker exec -it site-expense-db psql -U postgres -d site_expense_db -c "\dt"
+        ```
 -   **Restarting:**
     ```bash
     docker-compose restart
