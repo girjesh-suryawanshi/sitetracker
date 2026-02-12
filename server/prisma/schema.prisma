@@ -126,6 +126,12 @@ model Expense {
   bankAccount BankAccount? @relation(fields: [bank_account_id], references: [id])
 
   @@unique([site_id, vendor_id, date, amount])
+  @@index([site_id])
+  @@index([vendor_id])
+  @@index([category_id])
+  @@index([bank_account_id])
+  @@index([date])
+  @@index([payment_status])
   @@map("expenses")
 }
 
@@ -147,6 +153,9 @@ model Credit {
   bankAccount BankAccount? @relation(fields: [bank_account_id], references: [id])
   site        Site?        @relation(fields: [site_id], references: [id])
 
+  @@index([site_id])
+  @@index([bank_account_id])
+  @@index([date])
   @@map("credits")
 }
 
@@ -166,5 +175,8 @@ model FundTransfer {
   toAccount   BankAccount @relation("TransferTo", fields: [to_account_id], references: [id], onDelete: Cascade)
   creator     Profile     @relation("TransferCreator", fields: [created_by], references: [id])
 
+  @@index([from_account_id])
+  @@index([to_account_id])
+  @@index([date])
   @@map("fund_transfers")
 }
