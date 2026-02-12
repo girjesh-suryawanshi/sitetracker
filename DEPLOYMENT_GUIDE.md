@@ -84,11 +84,29 @@ docker exec -it site-expense-backend npx prisma db push
 
 ## Step 6: Access the Application
 
-Your application will be running on port **4100**.
+## Step 6: Access the Application
 
--   **Frontend:** `http://your_vps_ip:4100`
--   **API:** `http://your_vps_ip:4100/api/...` (Proxied internally)
--   **Database:** Port `5435` (e.g., connect via DBeaver at `your_vps_ip:5435`)
+Your application is running on **Port 4100**.
+
+Since you have a domain `sitetracker.haimiinfra.com`, you need to configure your **Main VPS Nginx** (Reverse Proxy) to point to this port.
+
+**Example Host Nginx Config (Run this on your VPS, outside Docker):**
+```nginx
+server {
+    listen 80;
+    server_name sitetracker.haimiinfra.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:4100;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+Once configured:
+-   **Frontend & API:** `http://sitetracker.haimiinfra.com`
+-   **Database:** Port `5435`
 
 ## Troubleshooting
 
