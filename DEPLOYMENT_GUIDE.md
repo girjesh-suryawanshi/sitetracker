@@ -147,9 +147,49 @@ To make `https://sitetracker.haimiinfra.com` work, you need to install an SSL ce
         ```
     4.  **Check Data (Optional - Advanced):**
         ```bash
-        docker exec -it site-expense-db psql -U postgres -d site_expense_db -c "\dt"
+         
         ```
--   **Restarting:**
-    ```bash
     docker-compose restart
     ```
+
+### Step 8: Migrate Local Data to VPS (Using `.dump` file)
+
+If you want to migrate your local data to the VPS, follow these steps.
+
+#### 1. Export Local Data (Create .dump file)
+Run this in your local terminal (Windows PowerShell).
+*Note: If `pg_dump` is not recognized, you may need to use the full path, e.g., `& "C:\Program Files\PostgreSQL\15\bin\pg_dump.exe" ...`*
+
+```powershell
+pg_dump -U postgres -d site_expense_db -Fc > site_expense_db.dump
+```
+- `-Fc`: Creates a "Custom" format dump (compressed, efficient).
+- `site_expense_db`: Your local database name.
+
+#### 2. Upload to VPS
+Use `scp` to copy the file to your server:
+```powershell
+scp site_expense_db.dump root@YOUR_VPS_IP:/var/www/site-expense-hub/
+```
+
+#### 3. Import on VPS
+SSH into your VPS and run:
+
+```bash
+cd /var/www/site-expense-hub
+
+# Stop the backend temporarily to prevent locks
+docker-compose stop backend
+
+# Drop existing (empty) DB and create fresh
+docker exec -i site-expense-db psql -U postgres -c "DROP DATABASE IF EXISTS site_expense_db;"
+docker exec -i site-expense-db psql -U postgres -c "CREATE DATABASE site_expense_db;"
+
+# Restore using pg_restore
+cat site_expense_db.dump | docker exec -i site-expense-db pg_restore -U postgres -d site_expense_db --clean --if-exists
+
+# Restart backend
+docker-compose start backend
+```
+
+Your data is now fully migrated!
