@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -96,6 +97,9 @@ export const SiteDetailsModal = ({ open, onOpenChange, siteName }: SiteDetailsMo
             <div className="h-3 w-3 rounded-full bg-primary" />
             {siteName} - Details
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Detailed view of expenses and credits for {siteName}
+          </DialogDescription>
         </DialogHeader>
 
         {/* Summary Cards */}
